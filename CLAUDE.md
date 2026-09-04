@@ -1,3 +1,3 @@
-# Contexto del proyecto
+#  Project Context
 
-Placeholder. Se reescribe en la fase 2.
+Placeholder. To be rewritten in Phase 2.
