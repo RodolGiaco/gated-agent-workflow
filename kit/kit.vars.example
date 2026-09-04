@@ -1,0 +1,13 @@
+# Single per-project file. Every hook and script reads from here.
+# Nothing else in the kit contains a project-specific value.
+
+# Branch that only changes through a pull request merged by GitHub.
+KIT_MAIN_BRANCH=main
+
+# Prefix of the branch the cycle creates for each issue.
+# Expected shape: <prefix><number>-<slug>
+KIT_ISSUE_BRANCH_PREFIX=issue/
+
+# Prefix of the lane used to repair the kit itself, which is not an issue.
+# Expected shape: <prefix><slug>
+KIT_MAINTENANCE_BRANCH_PREFIX=kit/
