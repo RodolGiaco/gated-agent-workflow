@@ -20,7 +20,22 @@
         "required_review_thread_resolution": false
       }
     },
-    { "type": "deletion" },
-    { "type": "non_fast_forward" }
+    {
+      "type": "deletion"
+    },
+    {
+      "type": "non_fast_forward"
+    },
+    {
+      "type": "required_status_checks",
+      "parameters": {
+        "required_status_checks": [
+          {
+            "context": "kit-checks"
+          }
+        ],
+        "strict_required_status_checks_policy": false
+      }
+    }
   ]
 }
