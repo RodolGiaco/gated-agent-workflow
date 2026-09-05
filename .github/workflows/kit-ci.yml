@@ -21,8 +21,12 @@ jobs:
       - name: Guard acceptance battery
         run: bash kit/test-guards.sh
 
+      # No fallback here: a drift between kit/hooks and the installed hooks
+      # must block the merge, which is the whole reason doctor.sh exists.
       - name: Kit consistency
-        run: bash kit/doctor.sh || true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash kit/doctor.sh
 
       # Project commands live in the single per-project file. When they are
       # empty the step is skipped, so the kit works in a repository that has
