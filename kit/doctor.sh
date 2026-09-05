@@ -33,6 +33,16 @@ else
   fail "installed settings.json matches kit/settings.json" "run: bash kit/install.sh"
 fi
 
+# The review gate delegates to these by name. Missing files fail the gate
+# with a confusing message, so it is checked here instead.
+MISSING_AGENTS=""
+for a in code-reviewer acceptance-auditor; do
+  [ -r ".claude/agents/$a.md" ] || MISSING_AGENTS="$MISSING_AGENTS $a"
+done
+[ -z "$MISSING_AGENTS" ] \
+  && pass "review subagents are present" \
+  || fail "review subagents are present" "missing:$MISSING_AGENTS"
+
 # Every hook aborts when one of these is missing.
 MISSING=""
 for key in KIT_MAIN_BRANCH KIT_ISSUE_BRANCH_PREFIX KIT_MAINTENANCE_BRANCH_PREFIX; do

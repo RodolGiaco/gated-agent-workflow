@@ -1,0 +1,96 @@
+name: Review
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+    branches: [main]
+
+# The job name is the status check context named by the branch ruleset.
+# Renaming it silently removes the review gate, so it is not renamed lightly.
+jobs:
+  claude-review:
+    name: claude-review
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      pull-requests: read
+      issues: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # .claude/agents is versioned on the protected branch on purpose: the
+      # action replaces .claude with the origin/main copy because the pull
+      # request head is untrusted, so a pull request cannot rewrite its own
+      # reviewer.
+
+      # The issue number comes from the branch name, which the guards already
+      # constrain to <prefix><number>-<slug>. A maintenance branch has no issue,
+      # so the acceptance audit is skipped there.
+      - name: Resolve the issue under review
+        id: issue
+        env:
+          BRANCH: ${{ github.event.pull_request.head.ref }}
+        run: |
+          set -a; . .claude/kit.vars; set +a
+          NUMBER=""
+          case "$BRANCH" in
+            "$KIT_ISSUE_BRANCH_PREFIX"*)
+              NUMBER=$(printf '%s' "${BRANCH#$KIT_ISSUE_BRANCH_PREFIX}" | cut -d- -f1) ;;
+          esac
+          echo "number=$NUMBER" >> "$GITHUB_OUTPUT"
+          echo "resolved issue number: ${NUMBER:-none}"
+
+      - name: Run the reviewers
+        uses: anthropics/claude-code-action@v1
+        env:
+          GH_TOKEN: ${{ github.token }}
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ github.token }}
+          prompt: |
+            REPO: ${{ github.repository }}
+            PR NUMBER: ${{ github.event.pull_request.number }}
+            BASE BRANCH: ${{ github.event.pull_request.base.ref }}
+            ISSUE NUMBER: ${{ steps.issue.outputs.number }}
+
+            Delegate to the code-reviewer subagent and write its final block
+            verbatim to the file review-code.md at the repository root.
+
+            When ISSUE NUMBER is not empty, delegate to the acceptance-auditor
+            subagent and write its final block verbatim to review-acceptance.md
+            at the repository root. When it is empty, write the single line
+            skipped to review-acceptance.md instead.
+
+            Write nothing else to either file. Do not modify any other file.
+            Do not commit, do not push, and do not comment on the pull request.
+          claude_args: |
+            --max-turns 60
+            --allowedTools Task,Read,Grep,Glob,Bash,Write
+
+      # The gate. Claude produced the verdicts; this step decides the exit code,
+      # so a review that is not run at all fails instead of passing silently.
+      - name: Enforce the verdicts
+        run: |
+          set -u
+          STATUS=0
+          for f in review-code.md review-acceptance.md; do
+            if [ ! -s "$f" ]; then
+              echo "FAIL  $f is missing or empty: the review did not run"
+              STATUS=1
+              continue
+            fi
+            echo "--- $f"
+            cat "$f"
+            if grep -qx 'skipped' "$f"; then
+              echo "PASS  $f skipped, no issue on this branch"
+            elif grep -A1 -x '### VERDICT' "$f" | grep -qx 'pass'; then
+              echo "PASS  $f"
+            else
+              echo "FAIL  $f did not return a pass verdict"
+              STATUS=1
+            fi
+          done
+          exit "$STATUS"
