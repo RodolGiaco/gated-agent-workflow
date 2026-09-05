@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+
+# The job name is the status check context named by the branch ruleset.
+# Renaming it silently removes the merge gate, so it is not renamed lightly.
+jobs:
+  kit-checks:
+    name: kit-checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Installing first proves the installer works and generates the hooks,
+      # which are not versioned because kit/hooks is their only source.
+      - name: Install the kit
+        run: bash kit/install.sh
+
+      - name: Guard acceptance battery
+        run: bash kit/test-guards.sh
+
+      - name: Kit consistency
+        run: bash kit/doctor.sh || true
+
+      # Project commands live in the single per-project file. When they are
+      # empty the step is skipped, so the kit works in a repository that has
+      # no build yet.
+      - name: Project checks
+        run: |
+          set -a
+          . .claude/kit.vars
+          set +a
+          if [ -n "${KIT_FORMAT_CHECK_CMD:-}" ]; then
+            echo "running: $KIT_FORMAT_CHECK_CMD"
+            eval "$KIT_FORMAT_CHECK_CMD"
+          else
+            echo "KIT_FORMAT_CHECK_CMD is empty, skipped"
+          fi
+          if [ -n "${KIT_TEST_CMD:-}" ]; then
+            echo "running: $KIT_TEST_CMD"
+            eval "$KIT_TEST_CMD"
+          else
+            echo "KIT_TEST_CMD is empty, skipped"
+          fi
