@@ -21,10 +21,10 @@ jobs:
         with:
           fetch-depth: 0
 
-      # Installs .claude/agents from kit/agents, so the review criteria have a
-      # single source that is reviewed in a pull request like any other file.
-      - name: Install the kit
-        run: bash kit/install.sh
+      # .claude/agents is versioned on the protected branch on purpose: the
+      # action replaces .claude with the origin/main copy because the pull
+      # request head is untrusted, so a pull request cannot rewrite its own
+      # reviewer.
 
       # The issue number comes from the branch name, which the guards already
       # constrain to <prefix><number>-<slug>. A maintenance branch has no issue,
