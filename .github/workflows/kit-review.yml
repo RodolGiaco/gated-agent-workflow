@@ -56,8 +56,14 @@ jobs:
             BASE BRANCH: ${{ github.event.pull_request.base.ref }}
             ISSUE NUMBER: ${{ steps.issue.outputs.number }}
 
+            Before anything else, write the line started to the file
+            review-trace.md at the repository root.
+
             Delegate to the code-reviewer subagent and write its final block
-            verbatim to the file review-code.md at the repository root.
+            verbatim to the file review-code.md at the repository root. When the
+            delegation is not possible, write to review-code.md a block whose
+            VERDICT is fail and whose single finding states why, in the format
+            the subagent would have used.
 
             When ISSUE NUMBER is not empty, delegate to the acceptance-auditor
             subagent and write its final block verbatim to review-acceptance.md
@@ -76,6 +82,11 @@ jobs:
         run: |
           set -u
           STATUS=0
+          if [ -s review-trace.md ]; then
+            echo "trace: the model started and could write files"
+          else
+            echo "trace: no file was written at all"
+          fi
           for f in review-code.md review-acceptance.md; do
             if [ ! -s "$f" ]; then
               echo "FAIL  $f is missing or empty: the review did not run"
