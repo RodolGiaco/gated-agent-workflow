@@ -82,6 +82,9 @@ jobs:
         run: |
           set -u
           STATUS=0
+          echo "pwd: $PWD"
+          ls -la review-*.md 2>/dev/null || echo "no review files here"
+          find "$GITHUB_WORKSPACE" -maxdepth 3 -name 'review-*.md' 2>/dev/null
           if [ -s review-trace.md ]; then
             echo "trace: the model started and could write files"
           else
