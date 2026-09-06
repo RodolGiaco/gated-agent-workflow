@@ -4,4 +4,5 @@
 .claude/kit-state/
 .claude/logs/
 .idea/
+target/
 # --- end claude kit ---

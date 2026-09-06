@@ -13,6 +13,25 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # The JDK version is a project value, so it comes from kit.vars like every
+      # other one. The dependency cache matters more than it looks: two required
+      # checks run per pull request, and several pull requests run per issue.
+      - name: Read the project variables
+        id: vars
+        run: |
+          set -a; . .claude/kit.vars; set +a
+          echo "java=${KIT_JAVA_VERSION:-}" >> "$GITHUB_OUTPUT"
+          echo "format=${KIT_FORMAT_CHECK_CMD:-}" >> "$GITHUB_OUTPUT"
+          echo "test=${KIT_TEST_CMD:-}" >> "$GITHUB_OUTPUT"
+
+      - name: Set up the JDK
+        if: steps.vars.outputs.java != ''
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ steps.vars.outputs.java }}
+          cache: maven
+
       # Installing first proves the installer works and generates the hooks,
       # which are not versioned because kit/hooks is their only source.
       - name: Install the kit
@@ -31,20 +50,14 @@ jobs:
       # Project commands live in the single per-project file. When they are
       # empty the step is skipped, so the kit works in a repository that has
       # no build yet.
-      - name: Project checks
+      - name: Format check
+        if: steps.vars.outputs.format != ''
         run: |
-          set -a
-          . .claude/kit.vars
-          set +a
-          if [ -n "${KIT_FORMAT_CHECK_CMD:-}" ]; then
-            echo "running: $KIT_FORMAT_CHECK_CMD"
-            eval "$KIT_FORMAT_CHECK_CMD"
-          else
-            echo "KIT_FORMAT_CHECK_CMD is empty, skipped"
-          fi
-          if [ -n "${KIT_TEST_CMD:-}" ]; then
-            echo "running: $KIT_TEST_CMD"
-            eval "$KIT_TEST_CMD"
-          else
-            echo "KIT_TEST_CMD is empty, skipped"
-          fi
+          echo "running: ${{ steps.vars.outputs.format }}"
+          ${{ steps.vars.outputs.format }}
+
+      - name: Project tests
+        if: steps.vars.outputs.test != ''
+        run: |
+          echo "running: ${{ steps.vars.outputs.test }}"
+          ${{ steps.vars.outputs.test }}

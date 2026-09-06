@@ -12,7 +12,20 @@ fail_closed() {
 
 # Refuse the tool call with a structured PreToolUse decision.
 # jq -n --arg escapes quotes, backslashes and newlines in the reason.
+# Every refusal is recorded. Without that record there is no evidence for
+# deciding later whether this guard still earns its maintenance cost.
 deny() {
+  local log_dir="${CLAUDE_PROJECT_DIR}/.claude/logs"
+  mkdir -p "$log_dir" 2>/dev/null \
+    && jq -nc \
+         --arg at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+         --arg guard "${GUARD_NAME:-guard}" \
+         --arg branch "${CURRENT_BRANCH:-unknown}" \
+         --arg command "${COMMAND:-unknown}" \
+         --arg reason "$1" \
+         '{at: $at, guard: $guard, branch: $branch, command: $command, reason: $reason}' \
+       >> "$log_dir/guard-denials.jsonl" 2>/dev/null
+
   jq -nc --arg reason "$1" '{
     hookSpecificOutput: {
       hookEventName: "PreToolUse",
