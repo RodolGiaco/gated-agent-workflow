@@ -50,14 +50,22 @@ jobs:
       # Project commands live in the single per-project file. When they are
       # empty the step is skipped, so the kit works in a repository that has
       # no build yet.
+      # The command reaches the shell through the environment, never through
+      # ${{ }} interpolation: that substitution happens before bash sees the
+      # script, so an edit to kit.vars would become runner script instead of
+      # an argument.
       - name: Format check
         if: steps.vars.outputs.format != ''
+        env:
+          CMD: ${{ steps.vars.outputs.format }}
         run: |
-          echo "running: ${{ steps.vars.outputs.format }}"
-          ${{ steps.vars.outputs.format }}
+          echo "running: $CMD"
+          eval "$CMD"
 
       - name: Project tests
         if: steps.vars.outputs.test != ''
+        env:
+          CMD: ${{ steps.vars.outputs.test }}
         run: |
-          echo "running: ${{ steps.vars.outputs.test }}"
-          ${{ steps.vars.outputs.test }}
+          echo "running: $CMD"
+          eval "$CMD"
