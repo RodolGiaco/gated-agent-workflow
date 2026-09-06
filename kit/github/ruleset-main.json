@@ -5,7 +5,9 @@
   "bypass_actors": [],
   "conditions": {
     "ref_name": {
-      "include": ["~DEFAULT_BRANCH"],
+      "include": [
+        "~DEFAULT_BRANCH"
+      ],
       "exclude": []
     }
   },
@@ -32,6 +34,9 @@
         "required_status_checks": [
           {
             "context": "kit-checks"
+          },
+          {
+            "context": "claude-review"
           }
         ],
         "strict_required_status_checks_policy": false
