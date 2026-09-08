@@ -5,8 +5,10 @@ on:
     types: [opened, synchronize]
     branches: [main]
 
-# The job name is the status check context named by the branch ruleset.
-# Renaming it silently removes the review gate, so it is not renamed lightly.
+# One job, not one per reviewer. A skipped job reports success to a required
+# status check, and a false green on the merge gate is worse than a false red,
+# so whether a reviewer applies is decided by the shell and never by an `if:`
+# on a job.
 jobs:
   claude-review:
     name: claude-review
@@ -21,14 +23,9 @@ jobs:
         with:
           fetch-depth: 0
 
-      # .claude/agents is versioned on the protected branch on purpose: the
-      # action replaces .claude with the origin/main copy because the pull
-      # request head is untrusted, so a pull request cannot rewrite its own
-      # reviewer.
-
-      # The issue number comes from the branch name, which the guards already
-      # constrain to <prefix><number>-<slug>. A maintenance branch has no issue,
-      # so the acceptance audit is skipped there.
+      # The issue number comes from the branch name, which the guards constrain
+      # to <prefix><number>-<slug>. A maintenance branch carries no issue, so
+      # the acceptance audit does not apply there.
       - name: Resolve the issue under review
         id: issue
         env:
@@ -41,9 +38,26 @@ jobs:
               NUMBER=$(printf '%s' "${BRANCH#$KIT_ISSUE_BRANCH_PREFIX}" | cut -d- -f1) ;;
           esac
           echo "number=$NUMBER" >> "$GITHUB_OUTPUT"
-          echo "resolved issue number: ${NUMBER:-none}"
+          echo "issue under review: ${NUMBER:-none}"
 
-      - name: Run the reviewers
+      # The files the change actually touches. The gate compares this list
+      # against what each reviewer claims to have read, which turns "did the
+      # review happen" from a model claim into a checkable fact.
+      - name: List the changed files
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          git diff --name-only "$BASE" "$HEAD" | sort > changed-files.txt
+          echo "files in this change:"
+          cat changed-files.txt
+
+      # Single task, no delegation. Subagent dispatch from inside this action is
+      # unreliable, so the criteria are read from their file instead. The action
+      # restores that file from the protected branch, so a pull request cannot
+      # weaken the criteria it is judged by.
+      - name: Code review
+        id: code
         uses: anthropics/claude-code-action@v1
         env:
           GH_TOKEN: ${{ github.token }}
@@ -51,62 +65,129 @@ jobs:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           github_token: ${{ github.token }}
           prompt: |
-            REPO: ${{ github.repository }}
-            PR NUMBER: ${{ github.event.pull_request.number }}
-            BASE BRANCH: ${{ github.event.pull_request.base.ref }}
-            ISSUE NUMBER: ${{ steps.issue.outputs.number }}
+            You are reviewing a pull request in ${{ github.repository }}.
 
-            Step 1. Before anything else, write these six lines to
-            review-code.md at the repository root, exactly as written:
+            The review criteria are written in .claude/agents/code-reviewer.md.
+            Read that file and apply exactly the criteria it states, including
+            its definition of what counts as a blocking finding.
 
-            ### VERDICT
-            fail
+            The change is the diff between ${{ github.event.pull_request.base.sha }}
+            and ${{ github.event.pull_request.head.sha }}. The files it touches
+            are listed in changed-files.txt.
 
-            ### FINDINGS
-            - [blocking] review - the review did not run to completion
-
-            Step 2. When ISSUE NUMBER is not empty, write the same six lines to
-            review-acceptance.md. When it is empty, write the single line
-            skipped to review-acceptance.md instead.
-
-            Step 3. Delegate to the code-reviewer subagent, then overwrite
-            review-code.md with its final block, verbatim.
-
-            Step 4. When ISSUE NUMBER is not empty, delegate to the
-            acceptance-auditor subagent, then overwrite review-acceptance.md
-            with its final block, verbatim.
-
-            When a delegation is not possible, overwrite that file with a block
-            whose VERDICT is fail and whose single finding states why, in the
-            format the subagent would have used.
-
-            Write nothing else to either file. Do not modify any other file.
-            Do not commit, do not push, and do not comment on the pull request.
+            Return your verdict as structured output. List in files_reviewed
+            every file you actually read from that diff. Do not write any file.
           claude_args: |
-            --max-turns 60
-            --allowedTools Task,Read,Grep,Glob,Bash,Write
+            --max-turns 40
+            --allowedTools Read,Grep,Glob,Bash
+            --json-schema '{"type":"object","properties":{"verdict":{"type":"string","enum":["pass","fail"]},"files_reviewed":{"type":"array","items":{"type":"string"}},"blocking_findings":{"type":"array","items":{"type":"object","properties":{"file":{"type":"string"},"description":{"type":"string"}},"required":["file","description"]}},"summary":{"type":"string"}},"required":["verdict","files_reviewed","blocking_findings","summary"]}'
 
-      # The gate. Claude produced the verdicts; this step decides the exit code,
-      # so a review that is not run at all fails instead of passing silently.
+      - name: Acceptance audit
+        id: acceptance
+        if: steps.issue.outputs.number != ''
+        uses: anthropics/claude-code-action@v1
+        env:
+          GH_TOKEN: ${{ github.token }}
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ github.token }}
+          prompt: |
+            You are auditing a pull request in ${{ github.repository }} against
+            the acceptance criteria of issue #${{ steps.issue.outputs.number }}.
+
+            The audit criteria are written in .claude/agents/acceptance-auditor.md.
+            Read that file and apply exactly the criteria it states, including
+            its rule that reading code is not evidence.
+
+            Read the issue with: gh issue view ${{ steps.issue.outputs.number }}
+
+            Return your verdict as structured output. List in files_reviewed
+            every file you actually read. Do not write any file.
+          claude_args: |
+            --max-turns 50
+            --allowedTools Read,Grep,Glob,Bash
+            --json-schema '{"type":"object","properties":{"verdict":{"type":"string","enum":["pass","fail"]},"files_reviewed":{"type":"array","items":{"type":"string"}},"blocking_findings":{"type":"array","items":{"type":"object","properties":{"file":{"type":"string"},"description":{"type":"string"}},"required":["file","description"]}},"summary":{"type":"string"}},"required":["verdict","files_reviewed","blocking_findings","summary"]}'
+
+      # The gate. Every rule here is decided by this shell, never by the model.
+      # Values arrive through the environment rather than ${{ }} interpolation,
+      # because that substitution happens before bash sees the script.
       - name: Enforce the verdicts
+        if: always()
+        env:
+          CODE_CONCLUSION: ${{ steps.code.outputs.conclusion }}
+          CODE_OUTPUT: ${{ steps.code.outputs.structured_output }}
+          AUDIT_APPLIES: ${{ steps.issue.outputs.number != '' }}
+          AUDIT_CONCLUSION: ${{ steps.acceptance.outputs.conclusion }}
+          AUDIT_OUTPUT: ${{ steps.acceptance.outputs.structured_output }}
         run: |
           set -u
           STATUS=0
-          for f in review-code.md review-acceptance.md; do
-            if [ ! -s "$f" ]; then
-              echo "FAIL  $f is missing or empty: the review did not run"
-              STATUS=1
-              continue
+
+          # A reviewer passes only when all five conditions hold. Any missing or
+          # inconsistent answer is a refusal, never a pass.
+          judge() {
+            local label="$1" conclusion="$2" payload="$3"
+            local verdict blocking reviewed unknown
+
+            if [ "$conclusion" != "success" ]; then
+              echo "FAIL  $label: the run did not complete (conclusion=${conclusion:-none})"
+              return 1
             fi
-            echo "--- $f"
-            cat "$f"
-            if grep -qx 'skipped' "$f"; then
-              echo "PASS  $f skipped, no issue on this branch"
-            elif grep -A1 -x '### VERDICT' "$f" | grep -qx 'pass'; then
-              echo "PASS  $f"
-            else
-              echo "FAIL  $f did not return a pass verdict"
-              STATUS=1
+            if [ -z "$payload" ]; then
+              echo "FAIL  $label: no structured output was produced"
+              return 1
             fi
-          done
+            if ! printf '%s' "$payload" | jq -e . >/dev/null 2>&1; then
+              echo "FAIL  $label: the structured output is not valid JSON"
+              return 1
+            fi
+
+            verdict=$(printf '%s' "$payload" | jq -r '.verdict // empty')
+            blocking=$(printf '%s' "$payload" | jq -r '.blocking_findings | length')
+            reviewed=$(printf '%s' "$payload" | jq -r '.files_reviewed | length')
+
+            printf '%s' "$payload" | jq -r '.summary // empty' | sed "s/^/      /"
+            printf '%s' "$payload" | jq -r '.blocking_findings[] | "      [blocking] \(.file) - \(.description)"'
+
+            # Evidence: a review that names no file, or names files this change
+            # does not touch, did not read this change.
+            if [ "$reviewed" -eq 0 ]; then
+              echo "FAIL  $label: no file was reported as reviewed"
+              return 1
+            fi
+            unknown=$(printf '%s' "$payload" | jq -r '.files_reviewed[]' | sort \
+                      | comm -23 - changed-files.txt | tr '\n' ' ')
+            if [ -n "${unknown// /}" ]; then
+              echo "FAIL  $label: reported files outside this change: $unknown"
+              return 1
+            fi
+
+            # Consistency: the verdict has to agree with the findings.
+            if [ "$verdict" = "pass" ] && [ "$blocking" -gt 0 ]; then
+              echo "FAIL  $label: verdict pass with $blocking blocking finding(s)"
+              return 1
+            fi
+            if [ "$verdict" = "fail" ] && [ "$blocking" -eq 0 ]; then
+              echo "FAIL  $label: verdict fail with no blocking finding"
+              return 1
+            fi
+            if [ "$verdict" != "pass" ]; then
+              echo "FAIL  $label: verdict is $verdict"
+              return 1
+            fi
+
+            echo "PASS  $label: $reviewed file(s) reviewed, no blocking finding"
+            return 0
+          }
+
+          echo "--- code review"
+          judge "code review" "$CODE_CONCLUSION" "$CODE_OUTPUT" || STATUS=1
+
+          echo "--- acceptance audit"
+          if [ "$AUDIT_APPLIES" = "true" ]; then
+            judge "acceptance audit" "$AUDIT_CONCLUSION" "$AUDIT_OUTPUT" || STATUS=1
+          else
+            echo "PASS  acceptance audit: no issue on this branch, not applicable"
+          fi
+
           exit "$STATUS"
