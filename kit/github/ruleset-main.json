@@ -33,10 +33,12 @@
       "parameters": {
         "required_status_checks": [
           {
-            "context": "kit-checks"
+            "context": "kit-checks",
+            "integration_id": 15368
           },
           {
-            "context": "claude-review"
+            "context": "claude-review",
+            "integration_id": 15368
           }
         ],
         "strict_required_status_checks_policy": false

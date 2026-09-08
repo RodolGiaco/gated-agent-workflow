@@ -56,19 +56,29 @@ jobs:
             BASE BRANCH: ${{ github.event.pull_request.base.ref }}
             ISSUE NUMBER: ${{ steps.issue.outputs.number }}
 
-            Before anything else, write the line started to the file
-            review-trace.md at the repository root.
+            Step 1. Before anything else, write these six lines to
+            review-code.md at the repository root, exactly as written:
 
-            Delegate to the code-reviewer subagent and write its final block
-            verbatim to the file review-code.md at the repository root. When the
-            delegation is not possible, write to review-code.md a block whose
-            VERDICT is fail and whose single finding states why, in the format
-            the subagent would have used.
+            ### VERDICT
+            fail
 
-            When ISSUE NUMBER is not empty, delegate to the acceptance-auditor
-            subagent and write its final block verbatim to review-acceptance.md
-            at the repository root. When it is empty, write the single line
+            ### FINDINGS
+            - [blocking] review - the review did not run to completion
+
+            Step 2. When ISSUE NUMBER is not empty, write the same six lines to
+            review-acceptance.md. When it is empty, write the single line
             skipped to review-acceptance.md instead.
+
+            Step 3. Delegate to the code-reviewer subagent, then overwrite
+            review-code.md with its final block, verbatim.
+
+            Step 4. When ISSUE NUMBER is not empty, delegate to the
+            acceptance-auditor subagent, then overwrite review-acceptance.md
+            with its final block, verbatim.
+
+            When a delegation is not possible, overwrite that file with a block
+            whose VERDICT is fail and whose single finding states why, in the
+            format the subagent would have used.
 
             Write nothing else to either file. Do not modify any other file.
             Do not commit, do not push, and do not comment on the pull request.
@@ -82,11 +92,6 @@ jobs:
         run: |
           set -u
           STATUS=0
-          if [ -s review-trace.md ]; then
-            echo "trace: the model started and could write files"
-          else
-            echo "trace: no file was written at all"
-          fi
           for f in review-code.md review-acceptance.md; do
             if [ ! -s "$f" ]; then
               echo "FAIL  $f is missing or empty: the review did not run"

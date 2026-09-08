@@ -52,6 +52,14 @@ done
   && pass "kit.vars defines every required key" \
   || fail "kit.vars defines every required key" "missing:$MISSING"
 
+# kit.vars is sourced by every hook and by CI. A value with spaces and no
+# quotes runs its remainder as a command, which breaks every guard at once
+# and only surfaces far from the edit that caused it.
+BAD_QUOTING=$(grep -nE '^[A-Z_][A-Z0-9_]*=[^"'"'"'#]* ' .claude/kit.vars 2>/dev/null | cut -d: -f1 | tr '\n' ' ')
+[ -z "$BAD_QUOTING" ] \
+  && pass "kit.vars values with spaces are quoted" \
+  || fail "kit.vars values with spaces are quoted" "unquoted value on line(s): $BAD_QUOTING"
+
 # Hook scripts are executed, not sourced.
 NOT_EXEC=""
 for f in .claude/hooks/*.sh; do
