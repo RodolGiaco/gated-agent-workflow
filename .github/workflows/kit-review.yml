@@ -76,11 +76,13 @@ jobs:
             are listed in changed-files.txt.
 
             Return your verdict as structured output. List in files_reviewed
-            every file you actually read from that diff. Do not write any file.
+            only files that this diff touches. List in files_consulted anything
+            else you read to reach your verdict, such as project documentation.
+            Do not write any file.
           claude_args: |
             --max-turns 40
             --allowedTools Read,Grep,Glob,Bash
-            --json-schema '{"type":"object","properties":{"verdict":{"type":"string","enum":["pass","fail"]},"files_reviewed":{"type":"array","items":{"type":"string"}},"blocking_findings":{"type":"array","items":{"type":"object","properties":{"file":{"type":"string"},"description":{"type":"string"}},"required":["file","description"]}},"summary":{"type":"string"}},"required":["verdict","files_reviewed","blocking_findings","summary"]}'
+            --json-schema '{"type":"object","properties":{"verdict":{"type":"string","enum":["pass","fail"]},"files_reviewed":{"type":"array","items":{"type":"string"}},"files_consulted":{"type":"array","items":{"type":"string"}},"blocking_findings":{"type":"array","items":{"type":"object","properties":{"file":{"type":"string"},"description":{"type":"string"}},"required":["file","description"]}},"summary":{"type":"string"}},"required":["verdict","files_reviewed","files_consulted","blocking_findings","summary"]}'
 
       - name: Acceptance audit
         id: acceptance
@@ -102,11 +104,12 @@ jobs:
             Read the issue with: gh issue view ${{ steps.issue.outputs.number }}
 
             Return your verdict as structured output. List in files_reviewed
-            every file you actually read. Do not write any file.
+            only files that this diff touches. List in files_consulted anything
+            else you read to reach your verdict. Do not write any file.
           claude_args: |
             --max-turns 50
             --allowedTools Read,Grep,Glob,Bash
-            --json-schema '{"type":"object","properties":{"verdict":{"type":"string","enum":["pass","fail"]},"files_reviewed":{"type":"array","items":{"type":"string"}},"blocking_findings":{"type":"array","items":{"type":"object","properties":{"file":{"type":"string"},"description":{"type":"string"}},"required":["file","description"]}},"summary":{"type":"string"}},"required":["verdict","files_reviewed","blocking_findings","summary"]}'
+            --json-schema '{"type":"object","properties":{"verdict":{"type":"string","enum":["pass","fail"]},"files_reviewed":{"type":"array","items":{"type":"string"}},"files_consulted":{"type":"array","items":{"type":"string"}},"blocking_findings":{"type":"array","items":{"type":"object","properties":{"file":{"type":"string"},"description":{"type":"string"}},"required":["file","description"]}},"summary":{"type":"string"}},"required":["verdict","files_reviewed","files_consulted","blocking_findings","summary"]}'
 
       # The gate. Every rule here is decided by this shell, never by the model.
       # Values arrive through the environment rather than ${{ }} interpolation,
