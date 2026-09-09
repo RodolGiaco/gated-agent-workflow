@@ -38,7 +38,14 @@
       "Bash(tail *)",
       "Bash(mkdir *)",
       "Bash(ls *)",
-      "Bash(find *)"
+      "Bash(find *)",
+      "Bash(echo *)",
+      "Bash(grep *)",
+      "Bash(wc *)",
+      "Bash(sed *)",
+      "Bash(python3 *)",
+      "Bash(diff *)",
+      "Bash(test *)"
     ]
   },
   "hooks": {
