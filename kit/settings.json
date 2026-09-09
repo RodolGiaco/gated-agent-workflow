@@ -29,7 +29,16 @@
       "Bash(git push *)",
       "Bash(gh issue *)",
       "Bash(gh pr *)",
-      "Bash(gh repo view *)"
+      "Bash(gh repo view *)",
+      "Edit",
+      "Write",
+      "Bash(mvn *)",
+      "Bash(cat *)",
+      "Bash(head *)",
+      "Bash(tail *)",
+      "Bash(mkdir *)",
+      "Bash(ls *)",
+      "Bash(find *)"
     ]
   },
   "hooks": {
