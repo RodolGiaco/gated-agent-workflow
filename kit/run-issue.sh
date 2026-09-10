@@ -146,8 +146,14 @@ echo "commits on the branch: $COMMITS"
 step "Push and pull request"
 git push -u origin "$BRANCH" --quiet || die "push rejected"
 
-PR=$(gh pr create --fill --base "$KIT_MAIN_BRANCH" --head "$BRANCH" --json number --jq .number 2>/dev/null) \
-  || PR=$(gh pr list --head "$BRANCH" --json number --jq '.[0].number')
+# gh pr create prints the pull request URL and takes no --json flag, so the
+# number is read from the URL. When one is already open, gh fails and the
+# existing number is looked up instead.
+# gh pr create takes no --json flag, so the number is not read from its output.
+# It is asked for afterwards, which also covers the case of a pull request that
+# was already open for this branch.
+gh pr create --fill --base "$KIT_MAIN_BRANCH" --head "$BRANCH" >/dev/null 2>&1 || true
+PR=$(gh pr list --head "$BRANCH" --state open --json number --jq '.[0].number // empty')
 [ -n "$PR" ] || die "cannot determine the pull request number"
 echo "pull request #$PR"
 
