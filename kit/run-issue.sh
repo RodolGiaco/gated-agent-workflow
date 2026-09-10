@@ -18,12 +18,54 @@ case "$ISSUE_NUMBER" in *[!0-9]*) echo "runner: the issue number must be digits"
 step() { printf '\n=== %s\n' "$1"; }
 die()  { printf 'runner: %s\n' "$1" >&2; exit 1; }
 
+# -------------------------------------------------------------- variables --
+LOCAL_ENV="$REPO_ROOT/.env.local"
+OPENROUTER_ENV="${HOME}/.config/claude-code/openrouter.env"
+
 set -a
 # shellcheck disable=SC1091
 . .claude/kit.vars || die "cannot read .claude/kit.vars"
+
+if [ -f "$LOCAL_ENV" ]; then
+  # shellcheck disable=SC1090
+  . "$LOCAL_ENV" || die "cannot read $LOCAL_ENV"
+fi
+
 set +a
 : "${KIT_MAIN_BRANCH:?not set in kit.vars}"
 : "${KIT_ISSUE_BRANCH_PREFIX:?not set in kit.vars}"
+
+# --------------------------------------------------------------- provider --
+CLAUDE_CMD=(claude)
+
+if [ "${USE_OPENROUTER:-false}" = "true" ]; then
+  [ -f "$OPENROUTER_ENV" ] \
+    || die "OpenRouter environment file not found: $OPENROUTER_ENV"
+
+  set -a
+  # shellcheck disable=SC1090
+  . "$OPENROUTER_ENV" || die "cannot read $OPENROUTER_ENV"
+  set +a
+
+  CLAUDE_CMD=(
+    claude
+    --model "${CLAUDE_MODEL:-openrouter/free}"
+  )
+
+  printf 'runner: using OpenRouter model: %s\n' \
+    "${CLAUDE_MODEL:-openrouter/free}"
+else
+  unset ANTHROPIC_BASE_URL
+  unset ANTHROPIC_AUTH_TOKEN
+  unset ANTHROPIC_API_KEY
+  unset OPENROUTER_API_KEY
+  unset CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY
+  unset CLAUDE_CODE_SKIP_FAST_MODE_ORG_CHECK
+  unset CLAUDE_CODE_SIMPLE_SYSTEM_PROMPT
+  unset CLAUDE_MODEL
+
+  printf 'runner: using Claude default authentication and model\n'
+fi
 
 # ---------------------------------------------------------------- preflight --
 # Every command the run depends on is checked before anything is mutated,
@@ -75,7 +117,7 @@ trap 'rm -f "$RESULT"' EXIT
 
 # No --bare: the run needs the project hooks, agents and permission rules.
 # dontAsk because nobody is here to answer a prompt.
-claude -p "Work issue #${ISSUE_NUMBER} to completion on the current branch.
+"${CLAUDE_CMD[@]}" -p "Work issue #${ISSUE_NUMBER} to completion on the current branch.
 Read the issue with gh issue view ${ISSUE_NUMBER}. Implement every acceptance
 criterion it states. Commit your work on this branch with a message that names
 the issue. Delegate to the code-reviewer and acceptance-auditor subagents before
