@@ -1,13 +1,11 @@
-package gate_agent_workflow;
+package io.github.rodolgiaco.oms;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
-class ApplicationTests {
+class GateAgentWorkflowApplicationTests {
 
-	@Test
-	void contextLoads() {
-	}
-
+  @Test
+  void contextLoads() {}
 }

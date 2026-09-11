@@ -15,5 +15,5 @@ KIT_MAINTENANCE_BRANCH_PREFIX=kit/
 
 # Project commands. Empty means the step is skipped.
 KIT_JAVA_VERSION=21
-KIT_FORMAT_CHECK_CMD="mvn -B -q -f java/pom.xml spotless:check"
-KIT_TEST_CMD="mvn -B -f java/pom.xml test"
+KIT_FORMAT_CHECK_CMD="mvn -B -q spotless:check"
+KIT_TEST_CMD="mvn -B test"
