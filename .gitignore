@@ -6,3 +6,5 @@
 .idea/
 target/
 # --- end claude kit ---
+
+.env.local
