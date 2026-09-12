@@ -1,4 +1,4 @@
-package io.github.rodolgiaco.gaw;
+package io.github.rodolgiaco.oms;
 
 /**
  * Placeholder unit so the build, the formatter and the test runner have something real to act on.

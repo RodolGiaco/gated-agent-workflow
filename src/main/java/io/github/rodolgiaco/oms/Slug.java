@@ -1,4 +1,4 @@
-package io.github.rodolgiaco.gaw;
+package io.github.rodolgiaco.oms;
 
 import java.util.Locale;
 import java.util.regex.Pattern;

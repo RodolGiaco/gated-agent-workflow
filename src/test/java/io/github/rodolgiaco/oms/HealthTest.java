@@ -1,4 +1,4 @@
-package io.github.rodolgiaco.gaw;
+package io.github.rodolgiaco.oms;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
