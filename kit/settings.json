@@ -30,8 +30,8 @@
       "Bash(gh issue *)",
       "Bash(gh pr *)",
       "Bash(gh repo view *)",
-      "Edit(/java/**)",
-      "Write(/java/**)",
+      "Edit(/src/**)",
+      "Write(/src/**)",
       "Bash(mvn *)",
       "Bash(cat *)",
       "Bash(head *)",
@@ -45,7 +45,10 @@
       "Bash(sed *)",
       "Bash(python3 *)",
       "Bash(diff *)",
-      "Bash(test *)"
+      "Bash(test *)",
+      "Bash(java *)",
+      "Bash(unzip *)",
+      "Bash(./mvnw *)"
     ]
   },
   "hooks": {

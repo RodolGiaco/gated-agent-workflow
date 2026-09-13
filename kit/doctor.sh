@@ -60,6 +60,17 @@ BAD_QUOTING=$(grep -nE '^[A-Z_][A-Z0-9_]*=[^"'"'"'#]* ' .claude/kit.vars 2>/dev/
   && pass "kit.vars values with spaces are quoted" \
   || fail "kit.vars values with spaces are quoted" "unquoted value on line(s): $BAD_QUOTING"
 
+# A permission rule anchored at a path that no longer exists grants nothing
+# and fails silently. It has already happened twice after moving directories.
+STALE=""
+for path in $(grep -oE '"(Edit|Write|Read)\(/[^*)]*' .claude/settings.json \
+              | sed -E 's/.*\(\///' | sort -u); do
+  [ -e "$path" ] || STALE="$STALE $path"
+done
+[ -z "$STALE" ] \
+  && pass "permission rules point at paths that exist" \
+  || fail "permission rules point at paths that exist" "missing:$STALE"
+
 # Hook scripts are executed, not sourced.
 NOT_EXEC=""
 for f in .claude/hooks/*.sh; do
