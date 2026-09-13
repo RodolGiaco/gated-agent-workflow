@@ -1,7 +1,7 @@
 package io.github.rodolgiaco.oms.order.api;
 
-import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.endsWith;
+import static org.hamcrest.Matchers.hasItem;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;

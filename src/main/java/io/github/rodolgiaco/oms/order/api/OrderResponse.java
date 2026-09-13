@@ -12,8 +12,7 @@ import java.util.UUID;
  * @param items the lines of the order
  * @param totalAmount what the order costs in total
  */
-public record OrderResponse(
-    UUID orderId, String status, List<Item> items, BigDecimal totalAmount) {
+public record OrderResponse(UUID orderId, String status, List<Item> items, BigDecimal totalAmount) {
 
   /**
    * One line of the order.
