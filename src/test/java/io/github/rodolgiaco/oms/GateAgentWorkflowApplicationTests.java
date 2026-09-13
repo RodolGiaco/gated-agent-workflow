@@ -6,8 +6,11 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.ApplicationContext;
+import org.springframework.context.annotation.Import;
 
+// The application now needs a database to start, which the container provides.
 @SpringBootTest
+@Import(TestcontainersConfiguration.class)
 class GateAgentWorkflowApplicationTests {
 
   @Autowired private ApplicationContext context;

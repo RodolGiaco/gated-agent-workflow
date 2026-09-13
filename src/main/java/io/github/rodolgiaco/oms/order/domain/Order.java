@@ -34,6 +34,34 @@ public final class Order {
    * @throws IllegalArgumentException if the items are null, empty, or contain a null element
    */
   public static Order create(List<OrderItem> items) {
+    return new Order(UUID.randomUUID(), checkedCopyOf(items), OrderStatus.CREATED);
+  }
+
+  /**
+   * Rebuilds an order that already exists, such as one read back from storage.
+   *
+   * <p>Unlike {@link #create(List)}, this keeps the given identifier and status instead of
+   * assigning new ones. The same invariants hold for the items.
+   *
+   * @param id the identifier the order already has
+   * @param items the items of the order; the list is copied, so later changes to it do not reach
+   *     the order
+   * @param status the status the order is in
+   * @return the rebuilt order
+   * @throws IllegalArgumentException if the identifier or status is null, or the items are null,
+   *     empty, or contain a null element
+   */
+  public static Order reconstitute(UUID id, List<OrderItem> items, OrderStatus status) {
+    if (id == null) {
+      throw new IllegalArgumentException("an order must have an identifier");
+    }
+    if (status == null) {
+      throw new IllegalArgumentException("an order must have a status");
+    }
+    return new Order(id, checkedCopyOf(items), status);
+  }
+
+  private static List<OrderItem> checkedCopyOf(List<OrderItem> items) {
     if (items == null || items.isEmpty()) {
       throw new IllegalArgumentException("an order must contain at least one item");
     }
@@ -42,7 +70,7 @@ public final class Order {
     if (items.stream().anyMatch(Objects::isNull)) {
       throw new IllegalArgumentException("an order must not contain a null item");
     }
-    return new Order(UUID.randomUUID(), List.copyOf(items), OrderStatus.CREATED);
+    return List.copyOf(items);
   }
 
   /**

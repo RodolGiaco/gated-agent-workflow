@@ -9,6 +9,7 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
 class OrderTest {
@@ -81,5 +82,56 @@ class OrderTest {
     Order order = Order.create(List.of(BOOK));
 
     assertThrows(UnsupportedOperationException.class, () -> order.items().add(PEN));
+  }
+
+  @Test
+  void reconstitutingKeepsTheGivenIdentifierItemsAndStatus() {
+    UUID id = UUID.randomUUID();
+
+    Order order = Order.reconstitute(id, List.of(BOOK, PEN), OrderStatus.CREATED);
+
+    assertEquals(id, order.id());
+    assertEquals(List.of(BOOK, PEN), order.items());
+    assertEquals(OrderStatus.CREATED, order.status());
+    assertEquals(new BigDecimal("28.60"), order.total());
+  }
+
+  @Test
+  void reconstitutingRejectsANullIdentifier() {
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> Order.reconstitute(null, List.of(BOOK), OrderStatus.CREATED));
+  }
+
+  @Test
+  void reconstitutingRejectsANullStatus() {
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> Order.reconstitute(UUID.randomUUID(), List.of(BOOK), null));
+  }
+
+  @Test
+  void reconstitutingRejectsAnOrderWithoutItems() {
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> Order.reconstitute(UUID.randomUUID(), List.of(), OrderStatus.CREATED));
+  }
+
+  @Test
+  void reconstitutingRejectsANullItem() {
+    assertThrows(
+        IllegalArgumentException.class,
+        () ->
+            Order.reconstitute(UUID.randomUUID(), Arrays.asList(BOOK, null), OrderStatus.CREATED));
+  }
+
+  @Test
+  void changingTheListTheOrderWasReconstitutedFromDoesNotChangeTheOrder() {
+    List<OrderItem> items = new ArrayList<>(List.of(BOOK));
+    Order order = Order.reconstitute(UUID.randomUUID(), items, OrderStatus.CREATED);
+
+    items.add(PEN);
+
+    assertEquals(List.of(BOOK), order.items());
   }
 }
