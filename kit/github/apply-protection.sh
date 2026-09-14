@@ -48,11 +48,14 @@ fi
 # request, so the protected branch is not where they are found.
 APP_ID=""
 HEAD_SHA=$(gh pr list --repo "$REPO" --state merged --limit 1 \
-           --json headRefOid --jq '.[0].headRefOid // empty' 2>/dev/null)
+           --json headRefOid \
+           --jq '.[0].headRefOid // empty') \
+  || fail "cannot query merged pull requests"
+
 if [ -n "$HEAD_SHA" ]; then
   APP_ID=$(gh api "/repos/$REPO/commits/$HEAD_SHA/check-runs" \
-           --jq '[.check_runs[].app.id] | unique | if length == 1 then .[0] else empty end' \
-           2>/dev/null)
+           --jq '[.check_runs[].app.id] | unique | if length == 1 then .[0] else empty end') \
+    || fail "cannot query check runs for commit $HEAD_SHA"
 fi
 
 CONTEXTS=$(jq -r '
@@ -81,7 +84,8 @@ fi
 
 # --------------------------------------------------------------- apply ----
 EXISTING=$(gh api "/repos/$REPO/rulesets" \
-           --jq ".[] | select(.name==\"$RULESET_NAME\") | .id" 2>/dev/null | head -1)
+           --jq "[.[] | select(.name==\"$RULESET_NAME\") | .id][0] // empty") \
+  || fail "cannot query repository rulesets"
 
 if [ -n "$EXISTING" ]; then
   note "updating ruleset $EXISTING"
