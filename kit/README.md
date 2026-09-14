@@ -4,8 +4,9 @@ A reusable setup that lets Claude Code work GitHub issues on its own inside a
 branch, while the merge into the protected branch stays out of its reach.
 
 Copy `kit/` into a repository, run `bash kit/install.sh`, edit
-`.claude/kit.vars`, and apply `kit/github/ruleset-main.json` to the repository.
-Nothing else in the kit contains a project-specific value.
+`.claude/kit.vars`, and run `bash kit/github/apply-protection.sh` to install the
+GitHub protection layer. Nothing else in the kit contains a project-specific
+value.
 
 ## The three layers, and what each one actually guarantees
 
@@ -50,6 +51,22 @@ The only layer the model cannot switch off. It requires a pull request, forbids
 deletion and non-fast-forward, and requires status checks. `bypass_actors` is
 empty on purpose: nobody bypasses it, including the repository owner.
 
+Install or update this layer with:
+
+```bash
+bash kit/github/apply-protection.sh
+```
+
+The script applies `kit/github/ruleset-main.json`, updates the existing
+`protect-main` ruleset instead of duplicating it, enables auto-merge, and reads
+the resulting configuration back from GitHub to verify it.
+
+On a repository with no merged pull requests yet, no check run exists from
+which to determine the publishing GitHub App. In that case the script installs
+the ruleset without required status checks. Run it again after the first pull
+request is merged so the required checks can be added and bound to the App that
+actually publishes them.
+
 Measured: a direct push to the protected branch is refused by the server with
 `push declined due to repository rule violations`.
 
@@ -83,19 +100,22 @@ all because a deny rule carries no exceptions. Both live in the hooks.
 
 ## Verify before you trust
 
-```
-bash kit/doctor.sh        # installation, consistency, and the server ruleset
-bash kit/test-guards.sh   # 56 guard cases, offline, no session spent
+```bash
+bash kit/github/apply-protection.sh  # apply/update and verify the GitHub barrier
+bash kit/doctor.sh                   # installation, consistency, and the server ruleset
+bash kit/test-guards.sh              # 56 guard cases, offline, no session spent
 ```
 
-`doctor.sh` fails when the installed hooks drift from `kit/hooks`, when a review
-subagent is missing, or when no active ruleset protects the default branch.
-That last check is the one that matters most: without it, someone installs the
-kit in an unprotected repository and believes they are covered.
+`apply-protection.sh` verifies the server-side protection immediately after
+applying it. `doctor.sh` fails when the installed hooks drift from `kit/hooks`,
+when a review subagent is missing, or when no active ruleset protects the
+default branch. That last check is the one that matters most: without it,
+someone installs the kit in an unprotected repository and believes they are
+covered.
 
 ## Run one issue
 
-```
+```bash
 bash kit/run-issue.sh <issue-number>
 ```
 
