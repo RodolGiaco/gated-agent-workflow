@@ -43,6 +43,24 @@ done
   && pass "review subagents are present" \
   || fail "review subagents are present" "missing:$MISSING_AGENTS"
 
+# Subagents and workflows are copied out of the kit and committed, so the two
+# copies can drift. The installed one is what runs.
+for pair in "agents:.claude/agents" "workflows:.github/workflows"; do
+  src="kit/${pair%%:*}"; dst="${pair##*:}"
+  if diff -rq "$src" "$dst" >/dev/null 2>&1; then
+    pass "installed ${pair%%:*} match $src"
+  else
+    fail "installed ${pair%%:*} match $src" "run: bash kit/install.sh"
+  fi
+done
+
+# The review workflow fails on every run without this secret.
+if gh secret list --json name --jq '.[].name' 2>/dev/null | grep -qx CLAUDE_CODE_OAUTH_TOKEN; then
+  pass "the review token secret is set"
+else
+  fail "the review token secret is set" "run: claude setup-token, then gh secret set CLAUDE_CODE_OAUTH_TOKEN"
+fi
+
 # Every hook aborts when one of these is missing.
 MISSING=""
 for key in KIT_MAIN_BRANCH KIT_ISSUE_BRANCH_PREFIX KIT_MAINTENANCE_BRANCH_PREFIX; do
