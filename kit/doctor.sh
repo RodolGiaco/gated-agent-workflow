@@ -54,8 +54,14 @@ for pair in "agents:.claude/agents" "workflows:.github/workflows"; do
   fi
 done
 
-# The review workflow fails on every run without this secret.
-if gh secret list --json name --jq '.[].name' 2>/dev/null | grep -qx CLAUDE_CODE_OAUTH_TOKEN; then
+# The review workflow fails on every run without this secret. Listing secrets
+# needs admin rights, which the CI token does not have, so being unable to ask
+# is reported as unknown instead of as missing: a check that cannot tell those
+# two apart fails on every run and stops meaning anything.
+SECRETS=$(gh secret list --json name --jq '.[].name' 2>/dev/null)
+if [ -z "$SECRETS" ]; then
+  printf 'SKIP  the review token secret is set\n      cannot list secrets here; this needs admin rights\n'
+elif printf '%s' "$SECRETS" | grep -qx CLAUDE_CODE_OAUTH_TOKEN; then
   pass "the review token secret is set"
 else
   fail "the review token secret is set" "run: claude setup-token, then gh secret set CLAUDE_CODE_OAUTH_TOKEN"
