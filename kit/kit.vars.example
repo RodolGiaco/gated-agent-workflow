@@ -13,7 +13,21 @@ KIT_ISSUE_BRANCH_PREFIX=issue/
 # Expected shape: <prefix><slug>
 KIT_MAINTENANCE_BRANCH_PREFIX=kit/
 
-# Project commands. Empty means the step is skipped.
-KIT_JAVA_VERSION=21
-KIT_FORMAT_CHECK_CMD="mvn -B -q spotless:check"
-KIT_TEST_CMD="mvn -B test"
+# --- project commands -------------------------------------------------------
+# Empty means the step is skipped, so the kit works in a repository that has no
+# build yet. Fill these in before running the first issue: the acceptance
+# auditor reports every criterion as unverifiable while KIT_TEST_CMD is empty.
+#
+# The format command and its check must be the same formatter, or CI will
+# reject files the cycle just formatted.
+#
+# Maven:   KIT_JAVA_VERSION=21
+#          KIT_FORMAT_CHECK_CMD="mvn -B -q spotless:check"
+#          KIT_TEST_CMD="mvn -B test"
+# Gradle:  KIT_JAVA_VERSION=21
+#          KIT_FORMAT_CHECK_CMD="./gradlew spotlessCheck"
+#          KIT_TEST_CMD="./gradlew test"
+
+KIT_JAVA_VERSION=
+KIT_FORMAT_CHECK_CMD=
+KIT_TEST_CMD=

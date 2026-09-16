@@ -1,0 +1,71 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+
+# The job name is the status check context named by the branch ruleset.
+# Renaming it silently removes the merge gate, so it is not renamed lightly.
+jobs:
+  kit-checks:
+    name: kit-checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # The JDK version is a project value, so it comes from kit.vars like every
+      # other one. The dependency cache matters more than it looks: two required
+      # checks run per pull request, and several pull requests run per issue.
+      - name: Read the project variables
+        id: vars
+        run: |
+          set -a; . .claude/kit.vars; set +a
+          echo "java=${KIT_JAVA_VERSION:-}" >> "$GITHUB_OUTPUT"
+          echo "format=${KIT_FORMAT_CHECK_CMD:-}" >> "$GITHUB_OUTPUT"
+          echo "test=${KIT_TEST_CMD:-}" >> "$GITHUB_OUTPUT"
+
+      - name: Set up the JDK
+        if: steps.vars.outputs.java != ''
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ steps.vars.outputs.java }}
+          cache: maven
+
+      # Installing first proves the installer works and generates the hooks,
+      # which are not versioned because kit/hooks is their only source.
+      - name: Install the kit
+        run: bash kit/install.sh
+
+      - name: Guard acceptance battery
+        run: bash kit/test-guards.sh
+
+      # No fallback here: a drift between kit/hooks and the installed hooks
+      # must block the merge, which is the whole reason doctor.sh exists.
+      - name: Kit consistency
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash kit/doctor.sh
+
+      # Project commands live in the single per-project file. When they are
+      # empty the step is skipped, so the kit works in a repository that has
+      # no build yet.
+      # The command reaches the shell through the environment, never through
+      # ${{ }} interpolation: that substitution happens before bash sees the
+      # script, so an edit to kit.vars would become runner script instead of
+      # an argument.
+      - name: Format check
+        if: steps.vars.outputs.format != ''
+        env:
+          CMD: ${{ steps.vars.outputs.format }}
+        run: |
+          echo "running: $CMD"
+          eval "$CMD"
+
+      - name: Project tests
+        if: steps.vars.outputs.test != ''
+        env:
+          CMD: ${{ steps.vars.outputs.test }}
+        run: |
+          echo "running: $CMD"
+          eval "$CMD"
