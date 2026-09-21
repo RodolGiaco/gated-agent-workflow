@@ -78,7 +78,10 @@ git diff --quiet && git diff --cached --quiet \
 
 # ------------------------------------------------------------------- branch --
 step "Branch"
-git fetch origin --quiet || die "git fetch failed"
+# --prune because the forge deletes a branch when its pull request merges, and
+# a stale remote-tracking ref would read as a branch that still exists there.
+git fetch origin --prune --quiet || die "git fetch failed"
+MAIN_REF="origin/${KIT_MAIN_BRANCH}"
 
 TITLE=$(gh issue view "$ISSUE_NUMBER" --json title --jq .title) \
   || die "cannot read issue $ISSUE_NUMBER from the forge"
@@ -93,13 +96,69 @@ SLUG=$(printf '%s' "$TITLE" \
 [ -n "$SLUG" ] || die "the issue title produced an empty slug"
 
 BRANCH="${KIT_ISSUE_BRANCH_PREFIX}${ISSUE_NUMBER}-${SLUG}"
-git switch -c "$BRANCH" "origin/${KIT_MAIN_BRANCH}" --quiet \
-  || die "cannot create $BRANCH from origin/${KIT_MAIN_BRANCH}"
+
+# A merged pull request means the issue is done, whether or not its branch
+# survived the merge. Checked before the base: a squash merge always moves the
+# protected branch past the base, so the base check would misname the cause.
+MERGED_PR=$(gh pr list --head "$BRANCH" --state merged --json number --jq '.[0].number // empty') \
+  || die "cannot read the pull requests of $BRANCH from the forge"
+[ -z "$MERGED_PR" ] \
+  || die "issue #$ISSUE_NUMBER is done: pull request #$MERGED_PR from $BRANCH is merged"
+
+# An existing branch is resumed rather than recreated, so a run that failed
+# halfway keeps its commits. The local branch takes precedence over origin.
+RESUMED=no
+START="$MAIN_REF"
+if git show-ref --verify --quiet "refs/heads/$BRANCH"; then
+  RESUMED=yes
+  START="$BRANCH"
+  # The push is never forced, so the local branch has to hold every commit
+  # origin has, or the push is refused after the session has been paid for.
+  if git show-ref --verify --quiet "refs/remotes/origin/$BRANCH"; then
+    git merge-base --is-ancestor "origin/$BRANCH" "$BRANCH" \
+      || die "$BRANCH lacks commits that origin/$BRANCH has; reconcile them before running"
+  fi
+elif git show-ref --verify --quiet "refs/remotes/origin/$BRANCH"; then
+  RESUMED=yes
+  START="origin/$BRANCH"
+fi
+
+# Rebase and merge are denied, so a branch cut before the protected branch
+# moved cannot be brought up to date. Its diff would read as a revert of the
+# newer commits, and the code reviewer blocks that.
+if [ "$RESUMED" = yes ]; then
+  BASE=$(git merge-base "$MAIN_REF" "$START") \
+    || die "$START shares no history with $MAIN_REF"
+  MAIN_TIP=$(git rev-parse --verify --quiet "${MAIN_REF}^{commit}") \
+    || die "cannot resolve $MAIN_REF"
+  [ "$BASE" = "$MAIN_TIP" ] \
+    || die "$BRANCH has a stale base: it forks from $MAIN_REF at ${BASE:0:12}, which has since moved to ${MAIN_TIP:0:12}"
+fi
+
+START_COMMIT=$(git rev-parse --verify --quiet "${START}^{commit}") \
+  || die "cannot resolve $START"
+
+if [ "$RESUMED" = no ]; then
+  git switch -c "$BRANCH" "$MAIN_REF" --quiet \
+    || die "cannot create $BRANCH from $MAIN_REF"
+elif [ "$START" = "$BRANCH" ]; then
+  git switch "$BRANCH" --quiet || die "cannot switch to $BRANCH"
+else
+  git switch -c "$BRANCH" --track "$START" --quiet \
+    || die "cannot create $BRANCH from $START"
+fi
 
 # A mutation is not applied until it is read back.
 ACTUAL=$(git symbolic-ref --quiet --short HEAD)
 [ "$ACTUAL" = "$BRANCH" ] || die "expected to be on $BRANCH, found $ACTUAL"
-echo "on $BRANCH"
+[ "$(git rev-parse HEAD)" = "$START_COMMIT" ] || die "$BRANCH is not at $START after the switch"
+PRIOR_COMMITS=$(git rev-list --count "${MAIN_REF}..HEAD") \
+  || die "cannot count the commits on $BRANCH"
+if [ "$RESUMED" = yes ]; then
+  echo "resuming $BRANCH from $START with $PRIOR_COMMITS earlier commits"
+else
+  echo "on $BRANCH"
+fi
 
 # -------------------------------------------------------------------- state --
 # Read by the SessionStart hook. Written with jq because the title comes from
@@ -109,20 +168,36 @@ jq -nc --arg n "$ISSUE_NUMBER" --arg t "$TITLE" --arg b "$BRANCH" \
   '{number: ($n|tonumber), title: $t, branch: $b}' \
   > .claude/kit-state/current-issue.json \
   || die "cannot write the session state"
+jq -e --arg n "$ISSUE_NUMBER" --arg b "$BRANCH" \
+  '.number == ($n|tonumber) and .branch == $b' \
+  < .claude/kit-state/current-issue.json >/dev/null \
+  || die "the session state does not record issue $ISSUE_NUMBER on $BRANCH"
 
 # --------------------------------------------------------------- the session --
 step "Session"
 RESULT=$(mktemp)
 trap 'rm -f "$RESULT"' EXIT
 
-# No --bare: the run needs the project hooks, agents and permission rules.
-# dontAsk because nobody is here to answer a prompt.
-"${CLAUDE_CMD[@]}" -p "Work issue #${ISSUE_NUMBER} to completion on the current branch.
+PROMPT="Work issue #${ISSUE_NUMBER} to completion on the current branch.
 Read the issue with gh issue view ${ISSUE_NUMBER}. Implement every acceptance
 criterion it states. Commit your work on this branch with a message that names
 the issue. Delegate to the code-reviewer and acceptance-auditor subagents before
 your final commit and address any blocking finding they return. Do not push and
-do not open a pull request: the runner does that." \
+do not open a pull request: the runner does that."
+
+# A resumed branch carries work from an earlier run. Without this the model
+# reads the issue as unstarted and redoes or discards it.
+if [ "$PRIOR_COMMITS" -gt 0 ]; then
+  PROMPT="${PROMPT}
+This branch already holds ${PRIOR_COMMITS} commits from an earlier run on this
+issue. Continue that work; do not start over. Read it first with
+git log ${MAIN_REF}..HEAD and git diff ${MAIN_REF}...HEAD, keep what is correct,
+and build on it."
+fi
+
+# No --bare: the run needs the project hooks, agents and permission rules.
+# dontAsk because nobody is here to answer a prompt.
+"${CLAUDE_CMD[@]}" -p "$PROMPT" \
   --permission-mode dontAsk \
   --output-format json > "$RESULT"
 
@@ -137,9 +212,14 @@ if [ "$DENIALS" != "0" ]; then
   die "the session was blocked; the branch is left in place for inspection"
 fi
 
-COMMITS=$(git rev-list --count "origin/${KIT_MAIN_BRANCH}..HEAD")
+COMMITS=$(git rev-list --count "${MAIN_REF}..HEAD")
 [ "$COMMITS" -gt 0 ] || die "the session produced no commit; nothing to push"
 echo "commits on the branch: $COMMITS"
+# On a resumed branch the total includes the earlier run, which may already be
+# complete; the session's own share is reported so the log shows which it was.
+if [ "$RESUMED" = yes ]; then
+  echo "commits from this session: $(git rev-list --count "${START_COMMIT}..HEAD")"
+fi
 
 # --------------------------------------------------------------------- push --
 # The runner pushes, not the model: this step has to be auditable in the log.

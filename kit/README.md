@@ -125,8 +125,10 @@ code, because a run stopped by a permission refusal still reports success.
 
 ## Known limits
 
-- `run-issue.sh` is not idempotent. A run that fails halfway leaves its branch
-  behind and the branch has to be removed before retrying.
+- `run-issue.sh` resumes the branch a failed run left behind, but only while
+  the protected branch has not moved past its base. Rebase and merge are
+  denied, so a stale branch stops the run and has to be rebuilt by hand. An
+  issue whose pull request is merged also stops the run.
 - A subagent verdict does not survive the subagent dying mid-pass. `maxTurns`
   caps the damage; it does not remove it.
 - The acceptance auditor reports every criterion as unverifiable while
