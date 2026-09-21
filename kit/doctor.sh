@@ -63,8 +63,13 @@ BAD_QUOTING=$(grep -nE '^[A-Z_][A-Z0-9_]*=[^"'"'"'#]* ' .claude/kit.vars 2>/dev/
 # A permission rule anchored at a path that no longer exists grants nothing
 # and fails silently. It has already happened twice after moving directories.
 STALE=""
-for path in $(grep -oE '"(Edit|Write|Read)\(/[^*)]*' .claude/settings.json \
-              | sed -E 's/.*\(\///' | sort -u); do
+# Only allow rules are checked. A rule that grants a capability over a path
+# that does not exist grants nothing and fails silently; a deny or ask rule
+# over an absent path simply never fires, which is harmless and is how a rule
+# anticipates a file the project has not created yet.
+for path in $(jq -r '.permissions.allow[]? | select(test("^(Edit|Write|Read)\\(/"))' \
+              .claude/settings.json 2>/dev/null \
+              | sed -E 's/.*\(\///; s/\*.*//; s#/$##' | sort -u); do
   [ -e "$path" ] || STALE="$STALE $path"
 done
 [ -z "$STALE" ] \
