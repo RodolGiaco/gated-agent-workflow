@@ -1,5 +1,8 @@
 package io.github.rodolgiaco.oms.web;
 
+import io.github.rodolgiaco.oms.catalog.application.DuplicateSkuException;
+import io.github.rodolgiaco.oms.catalog.application.InvalidProductException;
+import io.github.rodolgiaco.oms.catalog.application.ProductNotFoundException;
 import io.github.rodolgiaco.oms.order.application.InvalidOrderException;
 import io.github.rodolgiaco.oms.order.application.OrderNotFoundException;
 import java.util.List;
@@ -43,6 +46,28 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
     ProblemDetail problem =
         ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, e.getMessage());
     problem.setTitle("Invalid order");
+    return problem;
+  }
+
+  @ExceptionHandler(ProductNotFoundException.class)
+  ProblemDetail handleProductNotFound(ProductNotFoundException e) {
+    ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, e.getMessage());
+    problem.setTitle("Product not found");
+    return problem;
+  }
+
+  @ExceptionHandler(InvalidProductException.class)
+  ProblemDetail handleInvalidProduct(InvalidProductException e) {
+    ProblemDetail problem =
+        ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, e.getMessage());
+    problem.setTitle("Invalid product");
+    return problem;
+  }
+
+  @ExceptionHandler(DuplicateSkuException.class)
+  ProblemDetail handleDuplicateSku(DuplicateSkuException e) {
+    ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, e.getMessage());
+    problem.setTitle("Duplicate SKU");
     return problem;
   }
 
