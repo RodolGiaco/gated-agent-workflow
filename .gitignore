@@ -14,7 +14,6 @@ target/
 .sts4-cache
 
 ### IntelliJ IDEA ###
-.idea
 *.iws
 *.iml
 *.ipr
@@ -38,7 +37,9 @@ build/
 .claude/kit-state/
 .claude/logs/
 .idea/
-target/
 # --- end claude kit ---
 
-.env.local
+### Local environment ###
+.env
+.env.*
+!.env.example

@@ -18,6 +18,13 @@
   <description>Reference application that the gated agent workflow builds one issue at a time.</description>
   <url>https://github.com/RodolGiaco/gated-agent-workflow</url>
 
+  <licenses>
+    <license>
+      <name>MIT License</name>
+      <url>https://opensource.org/licenses/MIT</url>
+    </license>
+  </licenses>
+
   <properties>
     <java.version>21</java.version>
     <spotless.version>2.44.4</spotless.version>
