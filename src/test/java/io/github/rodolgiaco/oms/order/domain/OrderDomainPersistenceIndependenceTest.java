@@ -12,7 +12,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 /** Guards that persistence stays out of the domain model. */
-class DomainPersistenceIndependenceTest {
+class OrderDomainPersistenceIndependenceTest {
 
   @ParameterizedTest
   @ValueSource(classes = {Order.class, OrderItem.class, OrderStatus.class})
