@@ -103,7 +103,7 @@ all because a deny rule carries no exceptions. Both live in the hooks.
 ```bash
 bash kit/github/apply-protection.sh  # apply/update and verify the GitHub barrier
 bash kit/doctor.sh                   # installation, consistency, and the server ruleset
-bash kit/test-guards.sh              # 56 guard cases, offline, no session spent
+bash kit/test-guards.sh              # 58 hook cases, offline, no session spent
 ```
 
 `apply-protection.sh` verifies the server-side protection immediately after
@@ -119,17 +119,53 @@ covered.
 bash kit/run-issue.sh <issue-number>
 ```
 
-The run ends in exactly one declared state: merged, queued, or open with a
-reason and a non-zero exit. It reads `permission_denials` rather than the exit
-code, because a run stopped by a permission refusal still reports success.
+The run ends in a declared outcome: merged, queued, or a stop with its reason
+and a non-zero exit. It reads `permission_denials` rather than the exit code,
+because a run stopped by a permission refusal still reports success.
+
+### Local settings
+
+The runner sources `.env.local` at the repository root when the file exists.
+It holds per-machine values, so keep it out of version control.
+
+`USE_OPENROUTER=true` there routes the headless session through OpenRouter
+instead of the default Claude authentication, so the cycle keeps running when
+the subscription quota is spent. The runner then sources
+`~/.config/claude-code/openrouter.env`, which holds the variables Claude Code
+needs to reach OpenRouter, and passes `--model` with `CLAUDE_MODEL`, or with
+`openrouter/free` when that is unset. With any other value, the runner unsets
+the gateway variables, such as `ANTHROPIC_BASE_URL` and
+`ANTHROPIC_AUTH_TOKEN`, and uses the default authentication and model.
+
+## Session context
+
+`session-context.sh` runs on every SessionStart: at startup, on resume and
+after each compaction. It restates the facts a session needs and can lose to a
+compaction: the protected branch, the two work-branch shapes, what the guards
+refuse, the current branch and its uncommitted entries.
+
+It names the issue in progress, read from `.claude/kit-state/current-issue.json`,
+only while that issue's branch is checked out. The runner keeps the file after
+a run that ends with the merge queued, and on another branch that issue may
+well be finished.
+
+The hook never blocks, and its text states facts rather than instructions:
+text framed as out-of-band commands can trip Claude's prompt-injection
+defences and be shown instead of used.
 
 ## Known limits
 
 - `run-issue.sh` resumes the branch a failed run left behind, but only while
-  the protected branch has not moved past its base. Rebase and merge are
-  denied, so a stale branch stops the run and has to be rebuilt by hand. An
+  the protected branch has not moved past its base. The runner never rebases
+  or merges, so a stale branch stops the run and has to be rebuilt by hand. An
   issue whose pull request is merged also stops the run.
 - A subagent verdict does not survive the subagent dying mid-pass. `maxTurns`
   caps the damage; it does not remove it.
 - The acceptance auditor reports every criterion as unverifiable while
   `KIT_TEST_CMD` is empty.
+
+## Further reading
+
+The source repository documents the hooks, the required checks and every
+failure message of the kit in depth:
+https://github.com/RodolGiaco/gated-agent-workflow

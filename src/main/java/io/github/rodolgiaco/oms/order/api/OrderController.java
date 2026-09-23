@@ -1,5 +1,7 @@
 package io.github.rodolgiaco.oms.order.api;
 
+import io.github.rodolgiaco.oms.order.application.InvalidOrderException;
+import io.github.rodolgiaco.oms.order.application.OrderNotFoundException;
 import io.github.rodolgiaco.oms.order.application.port.in.CreateOrderUseCase;
 import io.github.rodolgiaco.oms.order.application.port.in.GetOrderUseCase;
 import io.github.rodolgiaco.oms.order.domain.Order;
@@ -15,7 +17,14 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
-/** Exposes the order use cases over HTTP. */
+/**
+ * Exposes the order use cases over HTTP.
+ *
+ * <p>A {@link RestController} because every method answers with a body written as JSON. It is a
+ * singleton that keeps no state besides the use cases, which Spring injects through the
+ * constructor. It is the entry point of every order request: it maps the HTTP shapes to the use
+ * cases and back, and leaves the errors to the global exception handler.
+ */
 @RestController
 @RequestMapping("/api/orders")
 public class OrderController {
@@ -40,6 +49,7 @@ public class OrderController {
    *
    * @param request the requested items
    * @return status 201 with the created order and its location
+   * @throws InvalidOrderException if the domain refuses the items, answered with 400
    */
   @PostMapping
   public ResponseEntity<OrderResponse> create(@Valid @RequestBody CreateOrderRequest request) {
@@ -57,6 +67,7 @@ public class OrderController {
    *
    * @param orderId the identifier of the order
    * @return the order
+   * @throws OrderNotFoundException if no order has that identifier, answered with 404
    */
   @GetMapping("/{orderId}")
   public OrderResponse get(@PathVariable UUID orderId) {

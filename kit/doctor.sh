@@ -84,13 +84,11 @@ BAD_QUOTING=$(grep -nE '^[A-Z_][A-Z0-9_]*=[^"'"'"'#]* ' .claude/kit.vars 2>/dev/
   && pass "kit.vars values with spaces are quoted" \
   || fail "kit.vars values with spaces are quoted" "unquoted value on line(s): $BAD_QUOTING"
 
-# A permission rule anchored at a path that no longer exists grants nothing
-# and fails silently. It has already happened twice after moving directories.
+# A permission rule anchored at a path that does not exist fails silently.
+# Only allow rules are checked: one over an absent path grants nothing, while a
+# deny or ask rule over an absent path simply never fires, which is harmless
+# and is how a rule anticipates a file the project has not created yet.
 STALE=""
-# Only allow rules are checked. A rule that grants a capability over a path
-# that does not exist grants nothing and fails silently; a deny or ask rule
-# over an absent path simply never fires, which is harmless and is how a rule
-# anticipates a file the project has not created yet.
 for path in $(jq -r '.permissions.allow[]? | select(test("^(Edit|Write|Read)\\(/"))' \
               .claude/settings.json 2>/dev/null \
               | sed -E 's/^[A-Za-z]+\(\///; s/\)$//; s/\*.*//; s#/$##' | sort -u); do
