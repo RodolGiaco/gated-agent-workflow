@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Offline acceptance battery for every PreToolUse guard.
+# Offline acceptance battery for every PreToolUse guard and the SessionStart hook.
 # Builds throwaway repositories so branch-dependent rules can be exercised
 # in both contexts. Never starts a Claude session.
 set -u
@@ -24,6 +24,28 @@ check() {
       "$expected" "$got" "${guard%.sh}" "$cmd" "$out"
     FAILURES=$((FAILURES + 1))
   fi
+}
+
+# Run the SessionStart hook and compare whether it names an issue in progress.
+check_context() {
+  local expected="$1" label="$2" out got
+  out=$("$CLAUDE_PROJECT_DIR/.claude/hooks/session-context.sh" < /dev/null 2>&1)
+  if printf '%s' "$out" | grep -q 'Issue in progress: #'; then got="issue"
+  else got="none"; fi
+  if [ "$got" = "$expected" ]; then
+    printf 'PASS  %-5s %-12s %s\n' "$got" "session-context" "$label"
+  else
+    printf 'FAIL  expected=%-5s got=%-5s %-12s %s\n      %s\n' \
+      "$expected" "$got" "session-context" "$label" "$out"
+    FAILURES=$((FAILURES + 1))
+  fi
+}
+
+# Record an issue in the state file, as the runner does before a session.
+record_issue() {
+  mkdir -p "$CLAUDE_PROJECT_DIR/.claude/kit-state"
+  jq -nc --arg b "$1" '{number: 3, title: "Example", branch: $b}' \
+    > "$CLAUDE_PROJECT_DIR/.claude/kit-state/current-issue.json"
 }
 
 # Create a throwaway repository checked out on the given branch.
@@ -127,6 +149,18 @@ make_repo kit/fix-push-guard
 check guard-commit.sh allow "git commit -m \"fix the push guard\""
 check guard-push.sh   allow "git push origin kit/fix-push-guard"
 check guard-push.sh   deny  "git push origin main"
+
+cd "$ORIGIN" || exit 1
+echo "=== the issue the runner recorded ==="
+make_repo issue/00003-example
+record_issue issue/00003-example
+check_context issue "on the branch of the recorded issue"
+cd "$ORIGIN" || exit 1
+make_repo main
+record_issue issue/00003-example
+# A queued merge leaves the record behind after the run, so on any other
+# branch it must not read as work in progress.
+check_context none  "on another branch, with the record left behind"
 
 cd "$ORIGIN" || exit 1
 printf -- '---\nfailures: %s\n' "$FAILURES"

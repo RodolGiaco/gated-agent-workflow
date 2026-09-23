@@ -42,14 +42,16 @@ Work branches: ${ISSUE_PREFIX}<number>-<slug> for an issue, ${MAINTENANCE_PREFIX
 Guard hooks refuse commits and pushes from any other branch, force pushes, and pull request merges without --auto.
 Current branch: ${BRANCH}. Uncommitted entries: ${PENDING}."
 
+# The record outlives the run when the merge is only queued, so it names the
+# issue in progress only while that issue's branch is checked out.
 TITLE=""
-if [ -n "$ISSUE_NUMBER" ]; then
+if [ -n "$ISSUE_NUMBER" ] && [ "$ISSUE_BRANCH" = "$BRANCH" ]; then
   CONTEXT="${CONTEXT}
 Issue in progress: #${ISSUE_NUMBER} ${ISSUE_TITLE}. Its branch is ${ISSUE_BRANCH}."
   TITLE="issue-${ISSUE_NUMBER}"
 else
   CONTEXT="${CONTEXT}
-No issue is recorded as in progress."
+No issue is recorded as in progress on this branch."
 fi
 
 # jq escapes the newlines and quotes; stdout carries the JSON and nothing else.
