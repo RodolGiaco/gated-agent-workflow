@@ -20,6 +20,11 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
 /**
  * Turns the exceptions of every controller into {@link ProblemDetail} responses.
  *
+ * <p>A {@link RestControllerAdvice} because it applies to every controller and writes what it
+ * returns as the response body. It is a singleton with no state and no dependencies. Every failed
+ * request ends here: a controller or the use case behind it throws, and this class picks the status
+ * and the title of the problem.
+ *
  * <p>The exceptions Spring MVC raises itself, such as an unreadable body or a malformed path
  * variable, are answered by the superclass.
  */

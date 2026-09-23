@@ -123,8 +123,8 @@ elif git show-ref --verify --quiet "refs/remotes/origin/$BRANCH"; then
   START="origin/$BRANCH"
 fi
 
-# Rebase and merge are denied, so a branch cut before the protected branch
-# moved cannot be brought up to date. Its diff would read as a revert of the
+# The runner never rebases or merges, so a branch cut before the protected
+# branch moved stays behind it. Its diff would read as a revert of the
 # newer commits, and the code reviewer blocks that.
 if [ "$RESUMED" = yes ]; then
   BASE=$(git merge-base "$MAIN_REF" "$START") \
@@ -226,9 +226,6 @@ fi
 step "Push and pull request"
 git push -u origin "$BRANCH" --quiet || die "push rejected"
 
-# gh pr create prints the pull request URL and takes no --json flag, so the
-# number is read from the URL. When one is already open, gh fails and the
-# existing number is looked up instead.
 # gh pr create takes no --json flag, so the number is not read from its output.
 # It is asked for afterwards, which also covers the case of a pull request that
 # was already open for this branch.

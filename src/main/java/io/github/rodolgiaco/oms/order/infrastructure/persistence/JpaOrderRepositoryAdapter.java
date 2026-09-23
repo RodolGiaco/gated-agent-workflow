@@ -7,7 +7,14 @@ import java.util.UUID;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-/** Stores {@link Order} aggregates in the relational database through JPA. */
+/**
+ * Stores {@link Order} aggregates in the relational database through JPA.
+ *
+ * <p>A {@link Component} rather than a {@code @Repository}: the Spring Data interface it delegates
+ * to already translates persistence exceptions, and this class only adapts it to the port. It is a
+ * singleton without state besides that interface, injected through the constructor. The service
+ * reaches it only through {@link OrderRepository}.
+ */
 @Component
 class JpaOrderRepositoryAdapter implements OrderRepository {
 
