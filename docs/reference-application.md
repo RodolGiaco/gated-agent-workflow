@@ -54,6 +54,7 @@ Tests hold the boundaries in place. `OrderLayerDependencyTest` and `CatalogLayer
 |---|---|---|---|---|
 | `POST` | `/api/products` | `sku`, `name`, `unitPrice` | `201` with the product and a `Location` header | `400` invalid body, `409` SKU already taken |
 | `GET` | `/api/products/{productId}` | — | `200` with the product | `400` malformed identifier, `404` unknown identifier |
+| `GET` | `/api/products/sku/{sku}` | — | `200` with the product that has the SKU, compared exactly | `404` unknown SKU |
 | `GET` | `/api/products?page=&size=` | — | `200` with one page, ordered by SKU | `400` when `page` is below 0 or `size` is outside 1–100 |
 | `POST` | `/api/orders` | `items`, each with `productId`, `quantity`, `unitPrice` | `201` with the order and a `Location` header | `400` invalid body |
 | `GET` | `/api/orders/{orderId}` | — | `200` with the order | `400` malformed identifier, `404` unknown identifier |
@@ -84,6 +85,21 @@ HTTP/1.1 201
 Location: http://localhost:8080/api/products/938fc86d-42a4-400a-b569-60a65c76df78
 Content-Type: application/json
 
+{
+  "productId": "938fc86d-42a4-400a-b569-60a65c76df78",
+  "sku": "BOOK-001",
+  "name": "Domain-Driven Design",
+  "unitPrice": 54.90
+}
+```
+
+### Find a product by its SKU
+
+```bash
+curl http://localhost:8080/api/products/sku/BOOK-001
+```
+
+```json
 {
   "productId": "938fc86d-42a4-400a-b569-60a65c76df78",
   "sku": "BOOK-001",

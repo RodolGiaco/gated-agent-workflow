@@ -57,6 +57,12 @@ class JpaProductRepositoryAdapter implements ProductRepository {
 
   @Override
   @Transactional(readOnly = true)
+  public Optional<Product> findBySku(String sku) {
+    return products.findBySku(sku).map(ProductEntityMapper::toDomain);
+  }
+
+  @Override
+  @Transactional(readOnly = true)
   public boolean existsBySku(String sku) {
     return products.existsBySku(sku);
   }

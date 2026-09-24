@@ -4,6 +4,7 @@ import io.github.rodolgiaco.oms.catalog.application.DuplicateSkuException;
 import io.github.rodolgiaco.oms.catalog.application.InvalidProductException;
 import io.github.rodolgiaco.oms.catalog.application.ProductNotFoundException;
 import io.github.rodolgiaco.oms.catalog.application.port.in.CreateProductUseCase;
+import io.github.rodolgiaco.oms.catalog.application.port.in.FindProductBySkuUseCase;
 import io.github.rodolgiaco.oms.catalog.application.port.in.GetProductUseCase;
 import io.github.rodolgiaco.oms.catalog.application.port.in.ListProductsUseCase;
 import io.github.rodolgiaco.oms.catalog.domain.Product;
@@ -38,6 +39,8 @@ public class ProductController {
 
   private final GetProductUseCase getProduct;
 
+  private final FindProductBySkuUseCase findProductBySku;
+
   private final ListProductsUseCase listProducts;
 
   /**
@@ -45,14 +48,17 @@ public class ProductController {
    *
    * @param createProduct the use case that creates products
    * @param getProduct the use case that retrieves products
+   * @param findProductBySku the use case that retrieves products by their SKU
    * @param listProducts the use case that lists products page by page
    */
   public ProductController(
       CreateProductUseCase createProduct,
       GetProductUseCase getProduct,
+      FindProductBySkuUseCase findProductBySku,
       ListProductsUseCase listProducts) {
     this.createProduct = createProduct;
     this.getProduct = getProduct;
+    this.findProductBySku = findProductBySku;
     this.listProducts = listProducts;
   }
 
@@ -85,6 +91,18 @@ public class ProductController {
   @GetMapping("/{productId}")
   public ProductResponse get(@PathVariable UUID productId) {
     return ProductApiMapper.toResponse(getProduct.getProduct(productId));
+  }
+
+  /**
+   * Returns the product that has a SKU.
+   *
+   * @param sku the SKU of the product, compared exactly
+   * @return the product
+   * @throws ProductNotFoundException if no product has that SKU, answered with 404
+   */
+  @GetMapping("/sku/{sku}")
+  public ProductResponse findBySku(@PathVariable String sku) {
+    return ProductApiMapper.toResponse(findProductBySku.findProductBySku(sku));
   }
 
   /**

@@ -27,6 +27,14 @@ public interface ProductRepository {
   Optional<Product> findById(UUID id);
 
   /**
+   * Loads the product with the given SKU.
+   *
+   * @param sku the SKU of the product, compared exactly, never null
+   * @return the product, or empty when no product has that SKU
+   */
+  Optional<Product> findBySku(String sku);
+
+  /**
    * Tells whether a product with the given SKU is stored.
    *
    * @param sku the SKU to look for, compared exactly, never null
