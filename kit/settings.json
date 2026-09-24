@@ -18,7 +18,9 @@
     "allow": [
       "Bash",
       "Edit(/src/**)",
-      "Write(/src/**)"
+      "Write(/src/**)",
+      "Edit(/docs/**)",
+      "Write(/docs/**)"
     ]
   },
   "hooks": {

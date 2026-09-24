@@ -178,12 +178,18 @@ step "Session"
 RESULT=$(mktemp)
 trap 'rm -f "$RESULT"' EXIT
 
+# A headless session ends with the model's turn. Measured on an issue run: the
+# session started the tests in the background, ended its turn to wait for them,
+# and exited with the work uncommitted. The prompt says so explicitly.
 PROMPT="Work issue #${ISSUE_NUMBER} to completion on the current branch.
 Read the issue with gh issue view ${ISSUE_NUMBER}. Implement every acceptance
 criterion it states. Commit your work on this branch with a message that names
 the issue. Delegate to the code-reviewer and acceptance-auditor subagents before
 your final commit and address any blocking finding they return. Do not push and
-do not open a pull request: the runner does that."
+do not open a pull request: the runner does that.
+Run every command in the foreground and wait for its result, tests included.
+This session ends as soon as you end your turn, so a command left running in
+the background never reports back and the work after it never happens."
 
 # A resumed branch carries work from an earlier run. Without this the model
 # reads the issue as unstarted and redoes or discards it.
