@@ -156,12 +156,14 @@ jobs:
             printf '%s' "$payload" | jq -r '.blocking_findings[] | "      [blocking] \(.file) - \(.description)"'
 
             # Evidence: a review that names no file, or names files this change
-            # does not touch, did not read this change.
+            # does not touch, did not read this change. A leading / or ./ is
+            # dropped first: it names the same file, and a path outside the
+            # diff is still refused after that.
             if [ "$reviewed" -eq 0 ]; then
               echo "FAIL  $label: no file was reported as reviewed"
               return 1
             fi
-            unknown=$(printf '%s' "$payload" | jq -r '.files_reviewed[]' | sort \
+            unknown=$(printf '%s' "$payload" | jq -r '.files_reviewed[] | sub("^\\.?/"; "")' | sort \
                       | comm -23 - changed-files.txt | tr '\n' ' ')
             if [ -n "${unknown// /}" ]; then
               echo "FAIL  $label: reported files outside this change: $unknown"
