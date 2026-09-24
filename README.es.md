@@ -43,15 +43,23 @@ Todo lo que el kit distribuye vive en [`kit/`](kit): copiar ese único directori
 
 ## Demo
 
-> [!NOTE]
-> Capturas por agregar. Cada fila indica el archivo que va en `docs/images/` y qué debería mostrar.
+Una ejecución real del [issue #45](https://github.com/RodolGiaco/gated-agent-workflow/issues/45), que agrega a la aplicación de referencia la búsqueda de un producto por SKU, desde el comando hasta el merge.
 
-| Captura | Qué debería mostrar |
-|---|---|
-| `docs/images/run-issue.gif` | Una grabación de terminal de `bash kit/run-issue.sh <n>`, desde `Preflight` hasta la línea final `QUEUED` o `MERGED`. |
-| `docs/images/guard-refusal.png` | Una sesión donde el guard de push rechaza `git push origin main` y el modelo lee el motivo en el mismo turno. |
-| `docs/images/pull-request-checks.png` | Un pull request abierto por el runner, con `kit-checks` y `claude-review` como checks obligatorios y el auto-merge activado. |
-| `docs/images/review-verdicts.png` | El log del paso `Enforce the verdicts`, con una línea `PASS` para el code review y otra para la auditoría de aceptación. |
+**1. Un comando resuelve el issue.** El runner revisa la instalación, crea la rama, deja que una sesión headless implemente el issue, pushea, abre el pull request y encola el merge.
+
+![bash kit/run-issue.sh 45, desde el preflight hasta el merge encolado](docs/images/run-issue.gif)
+
+**2. Los dos checks son obligatorios.** El ruleset no mergea hasta que pasan `kit-checks` y `claude-review`.
+
+![kit-checks aprobado y claude-review en curso, los dos marcados como Required](docs/images/required-checks.png)
+
+**3. El shell decide el veredicto.** Los dos revisores respondieron, y el paso `Enforce the verdicts` aceptó cada respuesta.
+
+![El paso Enforce the verdicts con una línea PASS para el code review y otra para la auditoría de aceptación](docs/images/review-verdicts.png)
+
+**4. GitHub mergea.** Cuando se cumplen todos los requisitos, el auto-merge integra el pull request en `main` con squash; nadie aprieta el botón.
+
+![Todos los checks aprobados, con el auto-merge activado en el pull request](docs/images/auto-merge.png)
 
 ## Características
 
@@ -328,7 +336,7 @@ El kit se verifica a sí mismo con scripts que cualquiera puede ejecutar. En un 
 | `bash kit/test-guards.sh` | 63 casos en repositorios descartables: cada forma de push, commit y merge que los guards deben permitir o rechazar, en una rama y en un detached HEAD, y el hook SessionStart. No inicia ninguna sesión de Claude. |
 | `bash kit/doctor.sh` | Herramientas y autenticación, copias instaladas contra `kit/`, revisores, claves y comillas de `kit.vars`, rutas de permisos, hooks ejecutables, estado de sesión ignorado y un ruleset activo en GitHub. |
 | `bash kit/github/apply-protection.sh` | Aplica el ruleset y lo vuelve a leer: activo, sin bypass, las tres reglas presentes, cada check vinculado a su app y el auto-merge activado. Requiere permisos de administración sobre el repositorio. |
-| `./mvnw verify` | La aplicación de referencia: 169 tests, incluidos tests de integración contra PostgreSQL mediante Testcontainers. |
+| `./mvnw verify` | La aplicación de referencia: 177 tests, incluidos tests de integración contra PostgreSQL mediante Testcontainers. |
 
 ## Decisiones técnicas
 
