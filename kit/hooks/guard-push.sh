@@ -9,7 +9,6 @@ GUARD_NAME="push-guard"
 
 load_vars
 read_command
-resolve_branch
 tokenize
 
 # Walk the token stream one command segment at a time.

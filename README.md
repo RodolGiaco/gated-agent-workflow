@@ -62,7 +62,7 @@ Everything the kit ships lives under [`kit/`](kit): copying that one directory a
 - ⚖️ **A two-reviewer gate in CI.** A code reviewer and an acceptance auditor run in GitHub Actions and answer with schema-validated JSON; a shell step, not the model, decides whether each one passed.
 - 🔁 **Resumable runs.** A run that fails halfway leaves its branch behind, and the next run continues from it. A stale base, or an issue whose pull request already merged, stops the run before a session is paid for.
 - 🧭 **Context that survives compaction.** A SessionStart hook restates the branch policy and the issue in progress on startup, on resume and after every compaction.
-- 🧪 **Offline verification.** `kit/test-guards.sh` runs 58 hook cases in throwaway repositories without starting a Claude session, and `kit/doctor.sh` checks the installation, its consistency and the live server ruleset.
+- 🧪 **Offline verification.** `kit/test-guards.sh` runs 63 hook cases in throwaway repositories without starting a Claude session, and `kit/doctor.sh` checks the installation, its consistency and the live server ruleset.
 - 🧾 **A record of every refusal.** Each guard refusal is appended to `.claude/logs/guard-denials.jsonl`, the evidence for deciding whether a guard still earns its place.
 - 🔀 **Provider switch.** `USE_OPENROUTER=true` in `.env.local` routes the headless session through OpenRouter, so the cycle keeps running when the subscription quota is spent.
 - 📦 **One copy installs it.** Every file the kit ships lives under `kit/`, and a single file, `.claude/kit.vars`, holds every project-specific value.
@@ -325,7 +325,7 @@ The kit verifies itself with scripts anyone can run. In a fresh clone, run `bash
 
 | Command | What it checks |
 |---|---|
-| `bash kit/test-guards.sh` | 58 cases in throwaway repositories: every push, commit and merge form the guards must allow or refuse, and the SessionStart hook. No Claude session is started. |
+| `bash kit/test-guards.sh` | 63 cases in throwaway repositories: every push, commit and merge form the guards must allow or refuse, on a branch and on a detached HEAD, and the SessionStart hook. No Claude session is started. |
 | `bash kit/doctor.sh` | Tools and authentication, installed copies against `kit/`, reviewers, `kit.vars` keys and quoting, permission paths, executable hooks, ignored session state, and an active ruleset on GitHub. |
 | `bash kit/github/apply-protection.sh` | Applies the ruleset and reads it back: active, no bypass actors, the three rules present, each check bound to its app, auto-merge enabled. Needs admin rights on the repository. |
 | `./mvnw verify` | The reference application: 169 tests, including integration tests against PostgreSQL through Testcontainers. |

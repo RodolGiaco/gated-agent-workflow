@@ -107,6 +107,6 @@ A refused command is not run. The reason goes back to the model within the same 
 | `This flag pushes refs beyond the current branch.` | Push the work branch explicitly. |
 | `The push contains a variable or command substitution.` or `The git subcommand comes from an expansion.` | Write the literal value, so the guard can verify it. |
 | `gh pr merge without --auto merges immediately.` or `gh pr merge --admin bypasses the required checks.` | Queue the merge with `gh pr merge --auto`. |
-| `HOOK ERROR [<guard>]: <reason>` | The guard could not evaluate the request, and it refuses until it can decide. Fix what the reason names: install jq, restore `.claude/kit.vars` or its required keys, or check out a branch instead of a detached HEAD. |
+| `HOOK ERROR [<guard>]: <reason>` | The guard could not evaluate the request, and it refuses until it can decide. Fix what the reason names: install jq, restore `.claude/kit.vars` or its required keys, or, for a commit or a push, check out a branch instead of a detached HEAD. |
 
 The reasons appear with the values from `.claude/kit.vars`; the table shows them with the template values.

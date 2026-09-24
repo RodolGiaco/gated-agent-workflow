@@ -54,9 +54,11 @@ load_vars() {
 
 # Refuse a write operation performed from a branch the cycle does not own.
 # Called only once the subcommand is known, so read-only git commands keep
-# working from any branch, including the protected one.
+# working from any branch, including the protected one, and from a detached
+# HEAD such as a CI checkout. The branch is resolved here for the same reason.
 require_working_branch() {
   local operation="$1"
+  resolve_branch
   local issue_pattern="^${KIT_ISSUE_BRANCH_PREFIX}[0-9]+-[a-z0-9][a-z0-9._-]*$"
   local maintenance_pattern="^${KIT_MAINTENANCE_BRANCH_PREFIX}[a-z0-9][a-z0-9._-]*$"
 
