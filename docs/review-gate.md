@@ -63,7 +63,7 @@ The `Enforce the verdicts` step judges each reviewer in the shell. A reviewer pa
 | It produced structured output | `FAIL <reviewer>: no structured output was produced` |
 | The output is valid JSON | `FAIL <reviewer>: the structured output is not valid JSON` |
 | It names at least one reviewed file | `FAIL <reviewer>: no file was reported as reviewed` |
-| Every reviewed file is in `changed-files.txt` | `FAIL <reviewer>: reported files outside this change: …` |
+| Every reviewed file is in `changed-files.txt`, once a leading `/` or `./` is dropped | `FAIL <reviewer>: reported files outside this change: …` |
 | `pass` comes with no blocking finding | `FAIL <reviewer>: verdict pass with N blocking finding(s)` |
 | `fail` comes with at least one blocking finding | `FAIL <reviewer>: verdict fail with no blocking finding` |
 | The verdict is `pass` | `FAIL <reviewer>: verdict is fail` |
