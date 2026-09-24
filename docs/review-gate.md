@@ -38,7 +38,7 @@ Runs when a pull request against the protected branch is opened or receives new 
 2. **Resolve the issue.** On a branch shaped `issue/<number>-<slug>`, the number is taken from the branch name; any other branch has no issue.
 3. **List the changed files** with `git diff --name-only <base> <head>` into `changed-files.txt`.
 4. **Code review.** `anthropics/claude-code-action` runs with a prompt that points at `.claude/agents/code-reviewer.md`, up to 40 turns, and only the `Read`, `Grep`, `Glob` and `Bash` tools.
-5. **Acceptance audit**, only when the branch has an issue. Same action, pointing at `.claude/agents/acceptance-auditor.md` and at the issue through `gh issue view <number>`, up to 50 turns.
+5. **Acceptance audit**, only when the branch has an issue. Same action, pointing at `.claude/agents/acceptance-auditor.md` and at the issue through `gh issue view <number>`, up to 80 turns: it runs the project checks and reads the evidence for every criterion, so it needs more room than the code review.
 6. **Enforce the verdicts.** Always runs, and decides the job's exit code.
 
 Both reviewers must answer with structured output of this shape, which a JSON schema in the workflow enforces:
