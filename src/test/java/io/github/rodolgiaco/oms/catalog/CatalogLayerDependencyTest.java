@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import io.github.rodolgiaco.oms.catalog.api.ProductController;
 import io.github.rodolgiaco.oms.catalog.application.ProductService;
 import io.github.rodolgiaco.oms.catalog.application.port.in.CreateProductUseCase;
+import io.github.rodolgiaco.oms.catalog.application.port.in.FindProductBySkuUseCase;
 import io.github.rodolgiaco.oms.catalog.application.port.in.GetProductUseCase;
 import io.github.rodolgiaco.oms.catalog.application.port.in.ListProductsUseCase;
 import io.github.rodolgiaco.oms.catalog.application.port.out.ProductRepository;
@@ -25,17 +26,22 @@ class CatalogLayerDependencyTest {
         .collect(Collectors.toSet());
   }
 
+  private static final Set<Class<?>> USE_CASES =
+      Set.of(
+          CreateProductUseCase.class,
+          GetProductUseCase.class,
+          FindProductBySkuUseCase.class,
+          ListProductsUseCase.class);
+
   @Test
   void theControllerHoldsOnlyTheUseCases() {
-    assertEquals(
-        Set.of(CreateProductUseCase.class, GetProductUseCase.class, ListProductsUseCase.class),
-        collaboratorsOf(ProductController.class));
+    assertEquals(USE_CASES, collaboratorsOf(ProductController.class));
   }
 
   @Test
   void theControllerIsBuiltOnlyFromTheUseCases() {
     assertEquals(
-        Set.of(CreateProductUseCase.class, GetProductUseCase.class, ListProductsUseCase.class),
+        USE_CASES,
         Arrays.stream(ProductController.class.getConstructors())
             .flatMap(constructor -> Arrays.stream(constructor.getParameterTypes()))
             .collect(Collectors.toSet()));

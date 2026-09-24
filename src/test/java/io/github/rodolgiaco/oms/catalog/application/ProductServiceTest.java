@@ -42,6 +42,11 @@ class ProductServiceTest {
     }
 
     @Override
+    public Optional<Product> findBySku(String sku) {
+      return products.values().stream().filter(product -> product.sku().equals(sku)).findFirst();
+    }
+
+    @Override
     public boolean existsBySku(String sku) {
       return products.values().stream().anyMatch(product -> product.sku().equals(sku));
     }
@@ -144,6 +149,26 @@ class ProductServiceTest {
         assertThrows(ProductNotFoundException.class, () -> service.getProduct(unknown));
 
     assertEquals(unknown, thrown.productId());
+  }
+
+  @Test
+  void findsAStoredProductBySku() {
+    Product product = Product.create("BOOK-1", "Clean Code", new BigDecimal("12.50"));
+    repository.save(product);
+    repository.save(Product.create("PEN-1", "Blue pen", BigDecimal.ONE));
+
+    assertSame(product, service.findProductBySku("BOOK-1"));
+  }
+
+  @Test
+  void findingAnUnknownSkuThrowsProductNotFound() {
+    repository.save(Product.create("BOOK-1", "Clean Code", BigDecimal.ONE));
+
+    ProductNotFoundException thrown =
+        assertThrows(ProductNotFoundException.class, () -> service.findProductBySku("book-1"));
+
+    assertEquals("book-1", thrown.sku());
+    assertEquals("no product has the SKU book-1", thrown.getMessage());
   }
 
   @Test

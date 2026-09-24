@@ -69,6 +69,29 @@ class JpaProductRepositoryAdapterTest {
   }
 
   @Test
+  void findsAProductBySkuWithAllItsValues() {
+    Product product = Product.create("BOOK-1", "Clean Code", new BigDecimal("12.50"));
+    repository.save(product);
+    repository.save(Product.create("PEN-1", "Blue pen", BigDecimal.ONE));
+
+    Product found = repository.findBySku("BOOK-1").orElseThrow();
+
+    assertEquals(product.id(), found.id());
+    assertEquals("BOOK-1", found.sku());
+    assertEquals("Clean Code", found.name());
+    assertEquals(new BigDecimal("12.50"), found.unitPrice());
+  }
+
+  @Test
+  void findsNothingForAnUnknownSku() {
+    repository.save(Product.create("BOOK-1", "Clean Code", BigDecimal.ONE));
+
+    assertTrue(repository.findBySku("BOOK-2").isEmpty());
+    // The SKU is compared exactly.
+    assertTrue(repository.findBySku("book-1").isEmpty());
+  }
+
+  @Test
   void tellsWhetherASkuIsTaken() {
     repository.save(Product.create("BOOK-1", "Clean Code", BigDecimal.ONE));
 

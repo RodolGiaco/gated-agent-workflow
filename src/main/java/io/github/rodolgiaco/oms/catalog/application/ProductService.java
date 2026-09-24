@@ -2,6 +2,7 @@ package io.github.rodolgiaco.oms.catalog.application;
 
 import io.github.rodolgiaco.oms.catalog.application.port.in.CreateProductCommand;
 import io.github.rodolgiaco.oms.catalog.application.port.in.CreateProductUseCase;
+import io.github.rodolgiaco.oms.catalog.application.port.in.FindProductBySkuUseCase;
 import io.github.rodolgiaco.oms.catalog.application.port.in.GetProductUseCase;
 import io.github.rodolgiaco.oms.catalog.application.port.in.ListProductsUseCase;
 import io.github.rodolgiaco.oms.catalog.application.port.out.ProductRepository;
@@ -18,7 +19,10 @@ import org.springframework.stereotype.Service;
  */
 @Service
 public class ProductService
-    implements CreateProductUseCase, GetProductUseCase, ListProductsUseCase {
+    implements CreateProductUseCase,
+        GetProductUseCase,
+        FindProductBySkuUseCase,
+        ListProductsUseCase {
 
   private final ProductRepository products;
 
@@ -51,6 +55,11 @@ public class ProductService
   @Override
   public Product getProduct(UUID productId) {
     return products.findById(productId).orElseThrow(() -> new ProductNotFoundException(productId));
+  }
+
+  @Override
+  public Product findProductBySku(String sku) {
+    return products.findBySku(sku).orElseThrow(() -> new ProductNotFoundException(sku));
   }
 
   @Override

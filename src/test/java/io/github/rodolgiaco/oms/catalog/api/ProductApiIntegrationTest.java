@@ -97,6 +97,40 @@ class ProductApiIntegrationTest {
   }
 
   @Test
+  void aCreatedProductCanBeFoundBySku() throws Exception {
+    String created =
+        create("BOOK-1", "Clean Code", "12.50")
+            .andExpect(status().isCreated())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+    create("PEN-1", "Blue pen", "1.20").andExpect(status().isCreated());
+    String productId = JsonPath.read(created, "$.productId");
+
+    mockMvc
+        .perform(get("/api/products/sku/{sku}", "BOOK-1"))
+        .andExpect(status().isOk())
+        .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+        .andExpect(jsonPath("$.productId").value(productId))
+        .andExpect(jsonPath("$.sku").value("BOOK-1"))
+        .andExpect(jsonPath("$.name").value("Clean Code"))
+        .andExpect(jsonPath("$.unitPrice").value(12.50));
+  }
+
+  @Test
+  void findingAnUnknownSkuReturns404AsAProblemDetail() throws Exception {
+    create("BOOK-1", "Clean Code", "12.50").andExpect(status().isCreated());
+
+    mockMvc
+        .perform(get("/api/products/sku/{sku}", "BOOK-2"))
+        .andExpect(status().isNotFound())
+        .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+        .andExpect(jsonPath("$.status").value(404))
+        .andExpect(jsonPath("$.title").value("Product not found"))
+        .andExpect(jsonPath("$.detail").value("no product has the SKU BOOK-2"));
+  }
+
+  @Test
   void creatingAProductWithAnExistingSkuReturns409AndStoresNothingMore() throws Exception {
     create("BOOK-1", "Clean Code", "12.50").andExpect(status().isCreated());
 

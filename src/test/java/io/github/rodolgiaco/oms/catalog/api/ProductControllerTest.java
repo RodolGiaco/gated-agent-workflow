@@ -19,6 +19,7 @@ import io.github.rodolgiaco.oms.catalog.application.ProductNotFoundException;
 import io.github.rodolgiaco.oms.catalog.application.ProductPage;
 import io.github.rodolgiaco.oms.catalog.application.port.in.CreateProductCommand;
 import io.github.rodolgiaco.oms.catalog.application.port.in.CreateProductUseCase;
+import io.github.rodolgiaco.oms.catalog.application.port.in.FindProductBySkuUseCase;
 import io.github.rodolgiaco.oms.catalog.application.port.in.GetProductUseCase;
 import io.github.rodolgiaco.oms.catalog.application.port.in.ListProductsUseCase;
 import io.github.rodolgiaco.oms.catalog.domain.Product;
@@ -62,6 +63,8 @@ class ProductControllerTest {
   @MockitoBean private CreateProductUseCase createProduct;
 
   @MockitoBean private GetProductUseCase getProduct;
+
+  @MockitoBean private FindProductBySkuUseCase findProductBySku;
 
   @MockitoBean private ListProductsUseCase listProducts;
 
@@ -132,6 +135,37 @@ class ProductControllerTest {
         .andExpect(jsonPath("$.status").value(400));
 
     verifyNoInteractions(getProduct);
+  }
+
+  @Test
+  void findingAProductBySkuReturns200WithTheProduct() throws Exception {
+    when(findProductBySku.findProductBySku("BOOK-1")).thenReturn(BOOK);
+
+    mockMvc
+        .perform(get("/api/products/sku/{sku}", "BOOK-1"))
+        .andExpect(status().isOk())
+        .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+        .andExpect(jsonPath("$.productId").value(BOOK.id().toString()))
+        .andExpect(jsonPath("$.sku").value("BOOK-1"))
+        .andExpect(jsonPath("$.name").value("Clean Code"))
+        .andExpect(jsonPath("$.unitPrice").value(12.50));
+
+    verifyNoInteractions(getProduct);
+  }
+
+  @Test
+  void findingAnUnknownSkuReturns404AsAProblemDetail() throws Exception {
+    when(findProductBySku.findProductBySku("NOPE-1"))
+        .thenThrow(new ProductNotFoundException("NOPE-1"));
+
+    mockMvc
+        .perform(get("/api/products/sku/{sku}", "NOPE-1"))
+        .andExpect(status().isNotFound())
+        .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+        .andExpect(jsonPath("$.status").value(404))
+        .andExpect(jsonPath("$.title").value("Product not found"))
+        .andExpect(jsonPath("$.detail").value("no product has the SKU NOPE-1"))
+        .andExpect(jsonPath("$.instance").value("/api/products/sku/NOPE-1"));
   }
 
   @Test
