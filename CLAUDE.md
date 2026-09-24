@@ -60,7 +60,7 @@ Breaking one of these either opens the barrier or stops the cycle, often without
 
 ```bash
 bash kit/install.sh         # regenerate the installed copies
-bash kit/test-guards.sh     # 58 hook cases, offline
+bash kit/test-guards.sh     # 63 hook cases, offline
 bash kit/doctor.sh          # installation, consistency, server ruleset
 bash -n kit/run-issue.sh    # syntax of every script you edited
 ```

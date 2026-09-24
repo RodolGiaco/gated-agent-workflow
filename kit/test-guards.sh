@@ -151,6 +151,20 @@ check guard-push.sh   allow "git push origin kit/fix-push-guard"
 check guard-push.sh   deny  "git push origin main"
 
 cd "$ORIGIN" || exit 1
+echo "=== on a detached HEAD ==="
+make_repo issue/00004-example
+git -c user.name=battery -c user.email=battery@localhost -c commit.gpgsign=false \
+  commit -q --allow-empty -m "a commit to detach from"
+git checkout -q --detach
+# A CI checkout has no branch. Read-only git keeps working there.
+check guard-commit.sh allow "git status --short"
+check guard-push.sh   allow "git log --oneline -1"
+check guard-push.sh   allow "git diff --name-only HEAD"
+# A write has no branch to be judged against, so the guard cannot decide.
+check guard-commit.sh exit2 "git commit -m \"fix\""
+check guard-push.sh   exit2 "git push origin issue/00004-example"
+
+cd "$ORIGIN" || exit 1
 echo "=== the issue the runner recorded ==="
 make_repo issue/00003-example
 record_issue issue/00003-example

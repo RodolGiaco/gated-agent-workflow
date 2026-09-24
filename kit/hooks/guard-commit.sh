@@ -9,7 +9,6 @@ GUARD_NAME="commit-guard"
 
 load_vars
 read_command
-resolve_branch
 tokenize
 
 SEGMENT_START=1

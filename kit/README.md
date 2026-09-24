@@ -103,7 +103,7 @@ all because a deny rule carries no exceptions. Both live in the hooks.
 ```bash
 bash kit/github/apply-protection.sh  # apply/update and verify the GitHub barrier
 bash kit/doctor.sh                   # installation, consistency, and the server ruleset
-bash kit/test-guards.sh              # 58 hook cases, offline, no session spent
+bash kit/test-guards.sh              # 63 hook cases, offline, no session spent
 ```
 
 `apply-protection.sh` verifies the server-side protection immediately after

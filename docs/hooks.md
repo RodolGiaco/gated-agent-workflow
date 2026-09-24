@@ -29,7 +29,7 @@ The three guards share their helpers through `guard-common.sh`, which is sourced
 ## How a guard reads a command
 
 1. **Input.** `read_command` takes the hook payload from stdin and extracts `.tool_input.command` with jq.
-2. **Branch.** `resolve_branch` reads the checked-out branch with `git symbolic-ref --short HEAD`, which also works on a branch with no commits yet. The merge guard does not need it.
+2. **Branch.** The push and commit guards read the checked-out branch with `git symbolic-ref --short HEAD`, which also works on a branch with no commits yet, and only once the subcommand is known to be a push or a commit. Every other git command, read-only ones included, never needs a branch, so it keeps working from a detached HEAD such as a CI checkout. The merge guard never reads it.
 3. **Tokens.** `tokenize` pads every shell separator (`&&`, `||`, `;`, `|`, `&`) with spaces, so a separator glued to a word, as in `main;`, stands on its own, and then splits the command on whitespace.
 4. **Segments.** The guard walks the tokens one command segment at a time, resetting its state at each separator. At the start of a segment it skips `VAR=value` assignments and the wrappers `timeout`, `time`, `nice`, `nohup`, `stdbuf`, `command` and `builtin`, together with their numeric or flag arguments. The next word is the command word.
 5. **Subcommand.** For `git`, the guard skips global options until the subcommand, consuming the argument of `-C`, `-c`, `--git-dir`, `--work-tree`, `--namespace` and `--exec-path`. A subcommand produced by an expansion is refused, because it hides which operation will run.
@@ -41,7 +41,7 @@ The three guards share their helpers through `guard-common.sh`, which is sourced
 |---|---|
 | Allow | Exit 0 with no output |
 | Refuse | Exit 0 with a `permissionDecision: deny` JSON on stdout. The reason reaches the model, and one line is appended to `.claude/logs/guard-denials.jsonl` |
-| Cannot decide | Exit 2 with `HOOK ERROR [<guard>]: <reason>` on stderr, which blocks the call: missing jq, unreadable `kit.vars`, a missing required key, an empty command or a detached HEAD |
+| Cannot decide | Exit 2 with `HOOK ERROR [<guard>]: <reason>` on stderr, which blocks the call: missing jq, unreadable `kit.vars`, a missing required key, an empty command, or a commit or push from a detached HEAD |
 
 Each line of the refusal log is a JSON object with `at`, `guard`, `branch`, `command` and `reason`.
 
@@ -93,7 +93,7 @@ Commits and pushes are allowed only from a branch that matches one of these patt
 | Issue | `^<KIT_ISSUE_BRANCH_PREFIX>[0-9]+-[a-z0-9][a-z0-9._-]*$` | `issue/39-add-the-product-catalog-module` |
 | Maintenance | `^<KIT_MAINTENANCE_BRANCH_PREFIX>[a-z0-9][a-z0-9._-]*$` | `kit/fix-push-guard` |
 
-Read-only git commands and branch creation work from any branch, including the protected one, so a session can always leave it to start an issue.
+Read-only git commands and branch creation work from any branch, including the protected one, so a session can always leave it to start an issue. They also work from a detached HEAD, where a commit or a push is refused because there is no branch to judge it against.
 
 ## session-context.sh
 
