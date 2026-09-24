@@ -80,13 +80,13 @@ jobs:
             else you read to reach your verdict, such as project documentation.
             Do not write any file.
           claude_args: |
-            --max-turns 40
+            --max-turns 80
             --allowedTools Read,Grep,Glob,Bash
             --json-schema '{"type":"object","properties":{"verdict":{"type":"string","enum":["pass","fail"]},"files_reviewed":{"type":"array","items":{"type":"string"}},"files_consulted":{"type":"array","items":{"type":"string"}},"blocking_findings":{"type":"array","items":{"type":"object","properties":{"file":{"type":"string"},"description":{"type":"string"}},"required":["file","description"]}},"summary":{"type":"string"}},"required":["verdict","files_reviewed","files_consulted","blocking_findings","summary"]}'
 
-      # The audit runs the project checks and reads the evidence for every
-      # criterion, so an issue with many criteria needs more turns than a code
-      # review does. Running out of turns fails the step, and the gate refuses.
+      # The turns a reviewer uses vary from run to run and grow with the size of
+      # the change and the number of criteria. Running out of turns fails the
+      # step, and the gate refuses, so both reviewers get the same wide limit.
       - name: Acceptance audit
         id: acceptance
         if: steps.issue.outputs.number != ''
